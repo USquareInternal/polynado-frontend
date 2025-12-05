@@ -22,7 +22,7 @@ export const HeroTerminal: React.FC = () => {
       "
       style={{
         backgroundImage:
-          "linear-gradient(0deg, rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/hero-terminal-grid.svg')",
+          "linear-gradient(0deg, rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/HT.png')",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}

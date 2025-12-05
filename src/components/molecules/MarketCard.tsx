@@ -5,7 +5,7 @@ import { CircularProgress } from '../atoms/CircularProgress';
 
 // --- Custom Colors ---
 const GREEN_COLOR = '#4CAF50'; // Vibrant Green
-const PINK_COLOR = '#F06292'; // Pink/Red
+const Red = '#FF6347'; // Pink/Red
 
 export interface MarketCardProps {
   title: string;
@@ -79,7 +79,7 @@ export const MarketCard: React.FC<MarketCardProps> = ({
           <div className="flex flex-col items-center">
             <CircularProgress
               percentage={noPercentage}
-              color={PINK_COLOR}
+              color={Red}
               label={noLabel}
               payText={noPay}
               isYesSide={false}

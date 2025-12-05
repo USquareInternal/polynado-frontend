@@ -91,9 +91,6 @@ export const MispricingTable: React.FC<MispricingTableProps> = ({ data = mockMis
         </table>
       </div>
 
-      <div className="text-center mt-6">
-        <Button variant="secondary">Explore Market</Button>
-      </div>
     </section>
   );
 };

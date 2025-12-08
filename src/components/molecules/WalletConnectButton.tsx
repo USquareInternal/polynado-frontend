@@ -9,8 +9,8 @@ import { useAccount } from "wagmi";
 import { showSuccessAlert } from "@/utils/SweetAlertUtils";
 
 interface WalletConnectProps {
-  onConnect?: () => void;
-  onDisconnect?: () => void;
+    onConnect?: () => void;
+    onDisconnect?: () => void;
 }
 
 /**

@@ -70,7 +70,7 @@ export const MarketCard: React.FC<MarketCardProps> = ({
               color={GREEN_COLOR}
               label={yesLabel}
               payText={yesPay}
-              payoutText={yesPayout}
+              // payoutText={yesPayout}
               isYesSide={true}
             />
           </div>

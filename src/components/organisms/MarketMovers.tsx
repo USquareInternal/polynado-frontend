@@ -5,7 +5,6 @@ import { MarketCard } from '@/components/molecules/MarketCard';
 import { MarketActivityChart } from '@/components/atoms/MarketActivityChart';
 import { TrendBadge } from '@/components/molecules/TrendBadge';
 import { Button } from '@/components/atoms/Button';
-import { useMarkets } from '@/hooks/useMarkets';
 
 // Mock data for demonstration
 const mockTrends = [
@@ -21,49 +20,78 @@ const mockTrends = [
 const trendBadgeCustomClasses =
     "inline-flex h-8 px-3 sm:h-8 sm:px-3 rounded-full border border-gray-500 text-sm sm:text-sm text-gray-100 font-medium bg-transparent justify-center items-center whitespace-nowrap";
 
+const mockMarkets = [
+    {
+        title: "Will ETH reach a new all-time high before 2026?",
+        category: "Crypto",
+        yesLabel: "Yes",
+        noLabel: "No",
+        yesPay: "$0.62",
+        noPay: "$0.38",
+        yesPercentage: 62,
+        noPercentage: 38,
+        yesPayout: "$1.00",
+        volume: "2.1M",
+        liquidity: "410K",
+        change: "↑3.8%",
+    },
+    {
+        title: "Next US Fed rate cut happens by Sept 2025",
+        category: "Macro",
+        yesLabel: "Yes",
+        noLabel: "No",
+        yesPay: "$0.54",
+        noPay: "$0.46",
+        yesPercentage: 54,
+        noPercentage: 46,
+        yesPayout: "$1.00",
+        volume: "1.4M",
+        liquidity: "220K",
+        change: "↑1.6%",
+    },
+    {
+        title: "Will the S&P 500 close 2025 above 6,000?",
+        category: "Equities",
+        yesLabel: "Yes",
+        noLabel: "No",
+        yesPay: "$0.41",
+        noPay: "$0.59",
+        yesPercentage: 41,
+        noPercentage: 59,
+        yesPayout: "$1.00",
+        volume: "980K",
+        liquidity: "185K",
+        change: "↓0.7%",
+    },
+    {
+        title: "Bitcoin dominance stays above 50% all quarter",
+        category: "Crypto",
+        yesLabel: "Yes",
+        noLabel: "No",
+        yesPay: "$0.68",
+        noPay: "$0.32",
+        yesPercentage: 68,
+        noPercentage: 32,
+        yesPayout: "$1.00",
+        volume: "1.9M",
+        liquidity: "305K",
+        change: "↑2.9%",
+    },
+];
+
 export const MarketMovers: React.FC = () => {
-    const { markets, isLoading, error } = useMarkets(4);
 
-    const renderMarketCards = () => {
-        if (isLoading) {
-            return (
-                <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-gray-800 rounded-xl p-4 h-48 animate-pulse"></div>
-                    <div className="bg-gray-800 rounded-xl p-4 h-48 animate-pulse hidden md:block"></div>
-                </div>
-            );
-        }
+    const renderMarketCards = () => (
+        <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-6">
+            {mockMarkets.map((market, index) => (
+                <MarketCard key={index} {...market} />
+            ))}
 
-        if (error) {
-            return (
-                <div className="col-span-12 md:col-span-8 text-center p-8 bg-red-900 border border-red-700 rounded-lg">
-                    <p className="text-red-400 font-medium">🚨 Error loading data: {error}</p>
-                </div>
-            );
-        }
-
-        if (markets.length === 0) {
-            return (
-                <div className="col-span-12 md:col-span-8 text-center p-8 bg-yellow-900 border border-yellow-700 rounded-lg">
-                    <p className="text-yellow-400 font-medium">No active markets available right now.</p>
-                </div>
-            );
-        }
-
-        const topMarkets = markets.slice(0, 4);
-
-        return (
-            <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-6">
-                {topMarkets.map((market, index) => (
-                    <MarketCard key={index} {...market} />
-                ))}
-
-                <div className="col-span-full text-center pt-2">
-                    <Button variant="secondary" className='w-auto px-10' style={{ backgroundColor: 'rgb(249, 115, 22)', color: 'white' }}>Explore Market</Button>
-                </div>
+            <div className="col-span-full text-center pt-2">
+                <Button variant="secondary" className='w-auto px-10' style={{ backgroundColor: 'rgb(249, 115, 22)', color: 'white' }}>Explore Market</Button>
             </div>
-        );
-    };
+        </div>
+    );
 
     return (
         <section className="mt-8">

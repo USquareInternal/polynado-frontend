@@ -72,8 +72,12 @@ export const MispricingTable: React.FC<MispricingTableProps> = ({ data = mockMis
           </thead>
 
           <tbody className="divide-y divide-gray-700 text-sm text-gray-200">
-            {data.map((row) => (
-              <tr key={row.id} className="hover:bg-white/5 transition-colors">
+            {data.map((row, idx) => (
+              <tr
+                key={row.id}
+                className="hover:bg-white/5 transition-colors"
+                style={{ backgroundColor: idx % 2 === 0 ? '#000000' : '#1E2022' }}
+              >
                 <td className="px-4 py-3 whitespace-nowrap font-medium">{row.marketName}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-gray-400">{row.category}</td>
                 <td className="px-4 py-3 whitespace-nowrap font-semibold text-gray-100">{formatPercent(row.priceA)}</td>

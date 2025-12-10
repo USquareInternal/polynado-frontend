@@ -22,3 +22,4 @@ const NFTPage: React.FC = () => {
 
 export default NFTPage;
 
+

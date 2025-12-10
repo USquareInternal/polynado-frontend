@@ -24,7 +24,7 @@ const DashboardPageContent: React.FC = () => {
       {/* 3. TOP MISPRICINGS (Table) */}
       <MispricingTable data={mockMispricingData} />
        {/* 4. REFERRAL DASHBOARD & FOOTER */}
-      <ReferralDashboard />
+       <ReferralDashboard isHomePage={true} />
     </>
   );
 };

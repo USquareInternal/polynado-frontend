@@ -35,10 +35,11 @@ const NFTCard: React.FC<NFTCardProps> = ({ title, price, image }) => {
 
       <div className="px-1 pb-1">
         <button
-          className="w-full py-2 px-4 rounded-xl font-semibold text-white transition-colors duration-150 shadow-[0_10px_25px_rgba(255,126,53,0.35)] cursor-pointer hover:cursor-pointer hover:brightness-110"
+          className="w-full py-2 px-4 rounded-xl font-semibold text-white transition-all duration-150 cursor-pointer hover:cursor-pointer hover:brightness-110 relative overflow-hidden"
           style={{
-            backgroundImage:
-              'linear-gradient(0deg, #D16300, #D16300), radial-gradient(63.11% 63.11% at 31.97% 19.67%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 69.79%, rgba(255, 255, 255, 0) 100%)',
+            backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+            border: "none",
+            boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
           }}
         >
           Mint Now

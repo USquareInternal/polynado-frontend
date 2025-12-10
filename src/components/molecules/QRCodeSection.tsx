@@ -51,10 +51,13 @@ export const QRCodeSection: React.FC<QRCodeSectionProps> = ({ referralLink, onDo
         <Button
           variant="secondary"
           onClick={handleDownload}
-          className="px-6 whitespace-nowrap font-semibold border-none text-white cursor-pointer hover:cursor-pointer"
+          className="px-6 whitespace-nowrap font-semibold border-none text-white cursor-pointer hover:cursor-pointer relative overflow-hidden"
           style={{
-            backgroundImage:
-              'linear-gradient(0deg, #D16300, #D16300), radial-gradient(63.11% 63.11% at 31.97% 19.67%, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 69.79%, rgba(255, 255, 255, 0) 100%)',
+            backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+            color: "white",
+            border: "none",
+            boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+            position: 'relative',
           }}
         >
           Download QR code

@@ -88,7 +88,19 @@ export const MarketMovers: React.FC = () => {
             ))}
 
             <div className="col-span-full text-center pt-2">
-                <Button variant="secondary" className='w-auto px-10' style={{ backgroundColor: 'rgb(249, 115, 22)', color: 'white' }}>Explore Market</Button>
+                <Button 
+                  variant="secondary" 
+                  className='w-auto px-10 relative overflow-hidden cursor-pointer' 
+                  style={{
+                    backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                    color: "white",
+                    border: "none",
+                    boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+                    position: 'relative',
+                  }}
+                >
+                  Explore Market
+                </Button>
             </div>
         </div>
     );

@@ -24,3 +24,34 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom Connect Wallet Button Styling - Glossy Orange Style */
+.custom-connect-button-wrapper button,
+.custom-connect-button-wrapper button:hover,
+.custom-connect-button-wrapper button:focus,
+.custom-connect-button-wrapper button:active {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset !important;
+  color: white !important;
+  border-radius: 0.5rem !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.15s ease !important;
+}
+
+.custom-connect-button-wrapper button:hover {
+  filter: brightness(1.1) !important;
+}
+
+/* Target RainbowKit's specific button classes */
+.custom-connect-button-wrapper [class*="rk__connectButton"],
+.custom-connect-button-wrapper [class*="rk__connectButton"] button,
+.custom-connect-button-wrapper [class*="rk__connectButton"] button:hover {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset !important;
+  color: white !important;
+}

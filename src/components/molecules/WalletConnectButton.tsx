@@ -47,11 +47,13 @@ const WalletConnect: React.FC<WalletConnectProps> = ({ onConnect, onDisconnect }
     }, [isConnected]); // Reruns whenever the connection status changes
 
     return (
-        <ConnectButton
-            showBalance={false}
-            accountStatus="address"
-            chainStatus="none"
-        />
+        <div className="custom-connect-button-wrapper">
+            <ConnectButton
+                showBalance={false}
+                accountStatus="address"
+                chainStatus="none"
+            />
+        </div>
     );
 };
 

@@ -9,16 +9,14 @@ export const HeroTerminal: React.FC = () => {
       className="
         relative
         overflow-hidden
-        relative
         border border-gray-700
         rounded-[15px]
         py-8 px-6 sm:px-10 md:px-14
         text-center
         shadow-2xl
         mb-8
-        max-w-[1236px]
+        w-full
         md:min-h-[354px]
-        mx-auto
       "
       style={{
         backgroundImage:

@@ -31,12 +31,12 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
       description: 'Earn $150 for every successful NFT mint through your referral link.',
     },
     {
-      image: '/image 12.png',
+      image: '/NFT.png',
       title: 'Instant Tracking',
       description: 'All referrals are tracked automatically and displayed in real-time on your dashboard.',
     },
     {
-      image: '/image 7.svg',
+      image: '/NFT.svg',
       title: 'Subscription Referral',
       description: 'Earn $50 for every subscription signup through your referral link.',
     },

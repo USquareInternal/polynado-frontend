@@ -13,6 +13,7 @@ export const NFTHeaderBanner: React.FC<NFTHeaderBannerProps> = ({
   floorPrice,
 }) => {
   return (
+    // max-w-6xl
     <section
       className="
         relative
@@ -21,7 +22,6 @@ export const NFTHeaderBanner: React.FC<NFTHeaderBannerProps> = ({
         border border-orange-500/30
         shadow-[0_0_40px_rgba(255,126,53,0.25)]
         text-white
-        max-w-6xl
         mx-auto
       "
       style={{

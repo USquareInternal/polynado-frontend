@@ -61,7 +61,8 @@ export const NFTCollectionGrid: React.FC<NFTCollectionGridProps> = ({ items = 9 
   }));
 
   return (
-    <section className="max-w-6xl mx-auto">
+    // max-w-6xl
+    <section className=" mx-auto">
       <Heading level={2} className="mb-4 text-white text-2xl">
         Collection
       </Heading>

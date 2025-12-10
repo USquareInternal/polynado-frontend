@@ -1,5 +1,7 @@
 // src/components/organisms/Sidebar.tsx
+'use client';
 import React from 'react';
+import { usePathname } from 'next/navigation';
 import NavLink from '../molecules/NavLink';
 import {
     LineChartOutlined,
@@ -7,6 +9,8 @@ import {
     FileTextOutlined,
     EllipsisOutlined,
     CloseOutlined,
+    GiftOutlined,
+    TeamOutlined,
 } from '@ant-design/icons';
 
 
@@ -19,14 +23,13 @@ interface SidebarProps {
 const CUSTOM_LOGO_PATH = '/path/to/your/logo/icon.svg';
 
 const navItems = [
-    { name: 'Markets', href: '/markets', icon: LineChartOutlined, isActive: false },
-    { name: 'My Top', href: '/mytop', icon: StarOutlined, isActive: true },
-    { name: 'Drafts', href: '/drafts', icon: FileTextOutlined, isActive: false },
-    { name: 'More', href: '/more', icon: EllipsisOutlined, isActive: false },
+    { name: 'NFT Mint', href: '/nft-mint', icon: GiftOutlined },
+    { name: 'Referral', href: '/referral', icon: TeamOutlined },
 ];
 
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+    const pathname = usePathname();
 
     // Define the narrow desktop width
     const desktopWidthClass = 'lg:w-20'; // 80px
@@ -60,10 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {/* 2. Logo Container */}
                 <div className={logoContainerClasses}>
 
-                    {/* Custom Logo Image Container (Now Left-Aligned on Mobile & Centered on Desktop) */}
-                    {/* KEY CHANGE: Added pt-2 to push the logo slightly down (8px top padding). 
-                       We keep 'items-center' for vertical alignment on the desktop view. */}
-                    <span className="flex items-center h-full pt-5 lg:flex lg:justify-center">
+                    <span className="flex items-center h-full mb-8 pt-5 lg:flex lg:justify-center">
                         <img
                             src='/image 7.svg'
                             alt="Logo"
@@ -83,18 +83,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
                 {/* Navigation Links */}
                 <nav className="p-4 space-y-2 lg:p-2 lg:space-y-4">
-                    {navItems.map(item => (
-                        <NavLink
-                            key={item.name}
-                            href={item.href}
-                            name={item.name}
-                            isActive={item.isActive || false}
-                            tooltipText={item.name}
-                            iconPlaceholder={item.icon}
-                            isNarrow={true}
-                            className="lg:justify-center"
-                        />
-                    ))}
+                    {navItems.map(item => {
+                        const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                        return (
+                            <NavLink
+                                key={item.name}
+                                href={item.href}
+                                name={item.name}
+                                isActive={isActive}
+                                tooltipText={item.name}
+                                iconPlaceholder={item.icon}
+                                isNarrow={true}
+                                className="lg:justify-center"
+                            />
+                        );
+                    })}
                 </nav>
             </div>
         </>

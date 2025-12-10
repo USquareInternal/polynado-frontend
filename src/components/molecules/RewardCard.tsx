@@ -24,26 +24,18 @@ export const RewardCard: React.FC<RewardCardProps> = ({ image, title, descriptio
   };
 
   return (
-    <div
-      className="relative p-[1px] rounded-xl"
-      style={{
-        border: '1px solid',
-        borderRadius: '16px',
-        borderImageSource: 'linear-gradient(149.27deg, #E25D5F 0.73%, #D9D9D9 45.92%)',
-        borderImageSlice: 1,
-      }}
-    >
+
       <div
         className="relative p-[1px] bg-[#0d0e10] rounded-xl"
-        style={{
-          border: '1px solid',
-          borderRadius: '16px',
-          borderImageSource: 'linear-gradient(149.27deg, #E25D5F 0.73%, rgba(217, 217, 217, 0) 45.92%)',
-          borderImageSlice: 1,
-        }}
+        // style={{
+        //   border: '1px solid',
+        //   borderRadius: '16px',
+        //   borderImageSource: 'linear-gradient(149.27deg, #E25D5F 0.73%, rgba(217, 217, 217, 0) 45.92%)',
+        //   borderImageSlice: 1,
+        // }}
       >
         {/* corner glows */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden " style={{ borderRadius: '16px' }}>
           <div className="absolute -left-10 -top-10 w-40 h-40 bg-[#DB7A23A3] blur-[50px]" />
           <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#DB7A23A3] blur-[50px]" />
         </div>
@@ -71,6 +63,6 @@ export const RewardCard: React.FC<RewardCardProps> = ({ image, title, descriptio
           </div>
         </div>
       </div>
-    </div>
+   
   );
 };

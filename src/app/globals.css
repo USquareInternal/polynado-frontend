@@ -25,11 +25,26 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Override RainbowKit's border-radius variable */
+:root {
+  --rk-radii-connectButton: 0.5rem !important;
+}
+
+/* Override RainbowKit's border-radius for all button states */
+[data-rk] .ju367vn,
+[data-rk] button,
+[data-rk] [role="button"] {
+  border-radius: 0.5rem !important;
+}
+
 /* Custom Connect Wallet Button Styling - Glossy Orange Style */
+/* Target all button elements within the wrapper */
 .custom-connect-button-wrapper button,
 .custom-connect-button-wrapper button:hover,
 .custom-connect-button-wrapper button:focus,
-.custom-connect-button-wrapper button:active {
+.custom-connect-button-wrapper button:active,
+.custom-connect-button-wrapper [role="button"],
+.custom-connect-button-wrapper [role="button"]:hover {
   background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
   background-color: transparent !important;
   border: none !important;
@@ -41,17 +56,112 @@ body {
   transition: all 0.15s ease !important;
 }
 
-.custom-connect-button-wrapper button:hover {
+.custom-connect-button-wrapper button:hover,
+.custom-connect-button-wrapper [role="button"]:hover {
   filter: brightness(1.1) !important;
 }
 
-/* Target RainbowKit's specific button classes */
+/* Target RainbowKit's specific button classes and all variants */
 .custom-connect-button-wrapper [class*="rk__connectButton"],
 .custom-connect-button-wrapper [class*="rk__connectButton"] button,
-.custom-connect-button-wrapper [class*="rk__connectButton"] button:hover {
+.custom-connect-button-wrapper [class*="rk__connectButton"] button:hover,
+.custom-connect-button-wrapper [class*="rk__connectButton"] [role="button"],
+.custom-connect-button-wrapper [class*="rk__connectButton"] [role="button"]:hover,
+.custom-connect-button-wrapper [class*="rk__connectButton"] > div,
+.custom-connect-button-wrapper [class*="rk__connectButton"] > div > button {
   background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
   background-color: transparent !important;
   border: none !important;
   box-shadow: 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset !important;
   color: white !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Target connected state - when showing wallet address */
+.custom-connect-button-wrapper [class*="rk__accountButton"],
+.custom-connect-button-wrapper [class*="rk__accountButton"] button,
+.custom-connect-button-wrapper [class*="rk__accountButton"] button:hover,
+.custom-connect-button-wrapper [class*="rk__accountButton"] > div,
+.custom-connect-button-wrapper [class*="rk__accountButton"] > div > button,
+.custom-connect-button-wrapper [class*="rk__accountButton"] > div > div,
+.custom-connect-button-wrapper [class*="rk__accountButton"] > div > div > button {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset !important;
+  color: white !important;
+  border-radius: 0.5rem !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.15s ease !important;
+}
+
+/* Ensure text and icons are white in connected state */
+.custom-connect-button-wrapper [class*="rk__accountButton"] span,
+.custom-connect-button-wrapper [class*="rk__accountButton"] div,
+.custom-connect-button-wrapper [class*="rk__accountButton"] svg {
+  color: white !important;
+  fill: white !important;
+}
+
+/* Target any nested elements that might have background colors */
+.custom-connect-button-wrapper * {
+  color: inherit;
+}
+
+/* More aggressive targeting for all possible RainbowKit button states */
+.custom-connect-button-wrapper > div > button,
+.custom-connect-button-wrapper > div > div > button,
+.custom-connect-button-wrapper a[role="button"],
+.custom-connect-button-wrapper a[role="button"]:hover {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset !important;
+  color: white !important;
+  border-radius: 0.5rem !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.15s ease !important;
+}
+
+/* Additional targeting for nested divs in connected state */
+.custom-connect-button-wrapper [class*="rk__accountButton"] > div,
+.custom-connect-button-wrapper [class*="rk__accountButton"] > div > div {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
+}
+
+/* Ensure chevron/dropdown icon is white */
+.custom-connect-button-wrapper svg,
+.custom-connect-button-wrapper svg path {
+  color: white !important;
+  fill: white !important;
+  stroke: white !important;
+}
+
+/* Override any inline styles that RainbowKit might apply */
+.custom-connect-button-wrapper [style*="background-color"]:not([style*="transparent"]) {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
+  background-color: transparent !important;
+}
+
+/* Ensure all nested elements in connected state have the Mint button styling */
+.custom-connect-button-wrapper [class*="rk__accountButton"] *,
+.custom-connect-button-wrapper [class*="rk__accountButton"] *:hover {
+  background-image: inherit !important;
+}
+
+/* Force the glossy gradient on the main button element in connected state */
+.custom-connect-button-wrapper [class*="rk__accountButton"]:has(button),
+.custom-connect-button-wrapper [class*="rk__accountButton"]:has([role="button"]) {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%) !important;
+  background-color: transparent !important;
+  box-shadow: 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
 }

@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Link from 'next/link';
 import { MenuOutlined } from '@ant-design/icons'; // Import Ant Design Icon for the hamburger
 import { Heading } from '@/components/atoms/Heading'; // Assuming you want to keep this import
 import WalletConnect from '../molecules/WalletConnectButton'; // Assuming this is your actual WalletConnect component
@@ -32,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
       className="fixed top-0 left-0 right-0 z-50 w-full py-3 border-b border-gray-700 lg:left-20 lg:w-[calc(100%-5rem)]"
       style={{ backgroundColor: '#1E2022' }}
     >
-      <div className="flex justify-between items-center max-w-7xl mx-auto px-6 lg:pl-12">
+      <div className="flex justify-between items-center w-full px-6 lg:pl-12">
 
         <div className="flex items-center space-x-4">
 
@@ -52,8 +53,20 @@ export const Header: React.FC<HeaderProps> = ({
           </h2>
         </div>
 
-        {/* === Right Section: Wallet Connect Button === */}
-        <div className="flex items-center">
+        {/* === Right Section: Login & Wallet Connect Buttons === */}
+        <div className="flex items-center gap-3">
+          {/* Login Button */}
+          <Link href="/login">
+            <button
+              className="px-4 py-2 rounded-lg font-medium transition-all duration-150 text-white border border-gray-600 hover:border-gray-500 hover:bg-gray-800/50 bg-transparent"
+              style={{ 
+                backgroundColor: 'transparent',
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+              }}
+            >
+              Login
+            </button>
+          </Link>
           {/* Pass the required props down to WalletConnect */}
           <WalletConnect
             onConnect={onConnect}

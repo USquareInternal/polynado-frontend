@@ -51,8 +51,12 @@ const NFTMintDashboard: React.FC = () => {
   });
 
   const hasMinted = (balance ?? BigInt(0)) > BigInt(0);
-  const whitelistReady = whitelistMintActive === true && isWhitelisted === true;
-  const mintingWindowOpen = publicMintActive === true || whitelistReady;
+  const whitelistBlocked = isWhitelisted === true && whitelistMintActive === false;
+  const whitelistReady = isWhitelisted === true && whitelistMintActive === true;
+  const mintingWindowOpen =
+    isWhitelisted === true
+      ? whitelistReady || publicMintActive === true
+      : publicMintActive === true;
   const isStatusLoading =
     isLoadingMintActive ||
     isLoadingWhitelistActive ||
@@ -160,8 +164,11 @@ const NFTMintDashboard: React.FC = () => {
       return;
     }
 
-    const whitelistReady = whitelistMintActive === true && isWhitelisted === true;
-    const mintingAllowed = !hasMinted && (publicMintActive === true || whitelistReady);
+    const whitelistReadyLocal = whitelistMintActive === true && isWhitelisted === true;
+    const mintingAllowed =
+      !hasMinted &&
+      !whitelistBlocked &&
+      (publicMintActive === true || whitelistReadyLocal);
 
     if (!mintingAllowed) {
       setErrorMessage('Minting is not active.');
@@ -295,6 +302,7 @@ const NFTMintDashboard: React.FC = () => {
                   onClick={handleMint}
                   disabled={
                     !isConnected ||
+                    whitelistBlocked ||
                     isApproving ||
                     isMinting ||
                     mintingStep === 'approving' ||
@@ -306,6 +314,7 @@ const NFTMintDashboard: React.FC = () => {
                   }
                   className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
                     isConnected &&
+                    !whitelistBlocked &&
                     !isApproving && 
                     !isMinting && 
                     mintingStep === 'idle' &&
@@ -318,6 +327,7 @@ const NFTMintDashboard: React.FC = () => {
                   }`}
                   style={
                     isConnected &&
+                    !whitelistBlocked &&
                     !isApproving && 
                     !isMinting && 
                     mintingStep === 'idle' &&
@@ -339,6 +349,8 @@ const NFTMintDashboard: React.FC = () => {
                 >
                   {!isConnected
                     ? 'Please connect your wallet'
+                    : whitelistBlocked
+                    ? 'Whitelist mint is not active'
                     : isStatusLoading
                     ? 'Checking Status...'
                     : mintPrice === undefined || mintPrice === null

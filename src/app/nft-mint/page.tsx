@@ -3,27 +3,31 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { useAccount, useReadContract } from 'wagmi';
 import { LockOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { useMintPrice, useMaxSupply, useRemainingSupply, useApproveUSDT, useMintNFT, usePublicMintActive, getNFTContractAddress } from '@/utils/nftContract';
+import { useMintPrice, useMaxSupply, useRemainingSupply, useApproveUSDT, useMintNFT, usePublicMintActive, getNFTContractAddress, useWhitelistMintActive, useWhitelistStatus, useNFTBalance, useUSDTMeta } from '@/utils/nftContract';
 
 const NFTMintDashboard: React.FC = () => {
   const { isConnected, address } = useAccount();
-  const [isMinted, setIsMinted] = useState(false);
   const [mintingStep, setMintingStep] = useState<'idle' | 'approving' | 'minting' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Read contract data
   const { mintPrice, isLoading: isLoadingPrice, error: priceError } = useMintPrice();
   const { maxSupply, isLoading: isLoadingMaxSupply, error: maxSupplyError } = useMaxSupply();
-  const { remainingSupply, isLoading: isLoadingRemainingSupply, error: remainingSupplyError } = useRemainingSupply();
+  const { remainingSupply, isLoading: isLoadingRemainingSupply, error: remainingSupplyError, refetch: refetchRemainingSupply } = useRemainingSupply();
   const { publicMintActive, isLoading: isLoadingMintActive } = usePublicMintActive();
-
-  // Write hooks for minting
-  const { approveUSDT, isPending: isApproving, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useApproveUSDT();
-  const { mint, isPending: isMinting, isSuccess: isMintSuccess, error: mintError, reset: resetMint } = useMintNFT();
+  const { whitelistMintActive, isLoading: isLoadingWhitelistActive } = useWhitelistMintActive();
+  const { isWhitelisted, isLoading: isLoadingWhitelistStatus, refetch: refetchWhitelistStatus } = useWhitelistStatus(address as `0x${string}` | undefined);
+  const { balance, isLoading: isLoadingBalance, refetch: refetchBalance } = useNFTBalance(address as `0x${string}` | undefined);
+  const { usdtAddress: usdtAddressFromContract, usdtDecimals, isLoading: isLoadingUsdtMeta } = useUSDTMeta();
 
   // Check USDT allowance
-  const usdtAddress = process.env.NEXT_PUBLIC_USDT_ADDRESS as `0x${string}` | undefined;
   const nftContractAddress = getNFTContractAddress();
+  const usdtEnvAddress = process.env.NEXT_PUBLIC_USDT_ADDRESS as `0x${string}` | undefined;
+  const usdtAddress = (usdtEnvAddress || usdtAddressFromContract) as `0x${string}` | undefined;
+
+  // Write hooks for minting
+  const { approveUSDT, isPending: isApproving, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useApproveUSDT(usdtAddress, nftContractAddress);
+  const { mint, isPending: isMinting, isSuccess: isMintSuccess, error: mintError, reset: resetMint } = useMintNFT();
   
   const { data: allowance } = useReadContract({
     address: usdtAddress,
@@ -46,6 +50,16 @@ const NFTMintDashboard: React.FC = () => {
     },
   });
 
+  const hasMinted = (balance ?? BigInt(0)) > BigInt(0);
+  const whitelistReady = whitelistMintActive === true && isWhitelisted === true;
+  const mintingWindowOpen = publicMintActive === true || whitelistReady;
+  const isStatusLoading =
+    isLoadingMintActive ||
+    isLoadingWhitelistActive ||
+    isLoadingWhitelistStatus ||
+    isLoadingBalance ||
+    (!usdtEnvAddress && isLoadingUsdtMeta);
+
   // Debug logging
   useEffect(() => {
     console.log('Contract Data:', {
@@ -58,21 +72,24 @@ const NFTMintDashboard: React.FC = () => {
       priceError,
       maxSupplyError,
       remainingSupplyError,
+      whitelistMintActive,
+      isWhitelisted,
+      balance,
       contractAddress: process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS,
     });
-  }, [mintPrice, maxSupply, remainingSupply, isLoadingPrice, isLoadingMaxSupply, isLoadingRemainingSupply, priceError, maxSupplyError, remainingSupplyError]);
+  }, [mintPrice, maxSupply, remainingSupply, isLoadingPrice, isLoadingMaxSupply, isLoadingRemainingSupply, priceError, maxSupplyError, remainingSupplyError, whitelistMintActive, isWhitelisted, balance]);
 
 
   // Format mint price (assuming USDT with 6 decimals)
   const formattedPrice = useMemo(() => {
     if (isLoadingPrice) return 'Loading...';
     if (priceError) return 'N/A';
-    // Check if mintPrice is undefined/null, not if it's 0 (0n is a valid price)
     if (mintPrice === undefined || mintPrice === null) return 'N/A';
-    // USDT has 6 decimals, so divide by 1e6
-    const priceInUSDT = Number(mintPrice) / 1e6;
+    const decimals = usdtDecimals ?? 6;
+    const divisor = 10 ** decimals;
+    const priceInUSDT = Number(mintPrice) / divisor;
     return `${priceInUSDT.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
-  }, [mintPrice, isLoadingPrice, priceError]);
+  }, [mintPrice, isLoadingPrice, priceError, usdtDecimals]);
 
   // Format max supply
   const formattedMaxSupply = useMemo(() => {
@@ -111,9 +128,10 @@ const NFTMintDashboard: React.FC = () => {
   useEffect(() => {
     if (isMintSuccess && mintingStep === 'minting') {
       setMintingStep('success');
-      setIsMinted(true);
+      refetchBalance?.();
+      refetchRemainingSupply?.();
     }
-  }, [isMintSuccess, mintingStep]);
+  }, [isMintSuccess, mintingStep, refetchBalance, refetchRemainingSupply]);
 
   // Handle errors
   useEffect(() => {
@@ -142,25 +160,27 @@ const NFTMintDashboard: React.FC = () => {
       return;
     }
 
+    const whitelistReady = whitelistMintActive === true && isWhitelisted === true;
+    const mintingAllowed = !hasMinted && (publicMintActive === true || whitelistReady);
+
+    if (!mintingAllowed) {
+      setErrorMessage('Minting is not active.');
+      return;
+    }
+
     // Validate contract state before minting
     if (mintPrice === undefined || mintPrice === null) {
       setErrorMessage('Unable to fetch mint price. Please try again.');
       return;
     }
 
-    // Check if mint price is set (contract requires non-zero price)
-    if (mintPrice === BigInt(0)) {
-      setErrorMessage('Mint price is not set in the contract. Please contact the contract owner.');
-      return;
-    }
-
     // Check if public mint is active
-    if (publicMintActive === false) {
-      setErrorMessage('Public minting is not currently active.');
+    if (!mintingWindowOpen) {
+      setErrorMessage('Minting is not currently active.');
       return;
     }
 
-    if (publicMintActive === undefined && !isLoadingMintActive) {
+    if (mintingWindowOpen === undefined && !isStatusLoading) {
       setErrorMessage('Unable to check mint status. Please try again.');
       return;
     }
@@ -220,10 +240,10 @@ const NFTMintDashboard: React.FC = () => {
                 alt="Pro NFT Shield"
                 className="w-64 h-64 object-contain drop-shadow-[0_0_30px_rgba(255,140,60,0.5)]"
                 style={{
-                  filter: isMinted ? 'brightness(1.2) saturate(1.3)' : 'brightness(0.7) saturate(0.6)',
+                  filter: hasMinted ? 'brightness(1.2) saturate(1.3)' : 'brightness(0.7) saturate(0.6)',
                 }}
               />
-              {isMinted && (
+              {hasMinted && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                   <div className="bg-green-500 px-6 py-2 rounded-lg transform -rotate-12 shadow-lg">
                     <span className="text-white font-bold text-lg">MINTED</span>
@@ -258,7 +278,7 @@ const NFTMintDashboard: React.FC = () => {
 
           {/* Mint Button */}
           <div className="space-y-2">
-            {isMinted ? (
+            {hasMinted ? (
               <button
                 className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 cursor-pointer relative overflow-hidden"
                 style={{
@@ -267,41 +287,44 @@ const NFTMintDashboard: React.FC = () => {
                   boxShadow: '3px 4px 5px 0px rgba(16, 185, 129, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
                 }}
               >
-                Pro Access Unlocked!
+                Minted
               </button>
             ) : (
               <>
                 <button
                   onClick={handleMint}
                   disabled={
-                    !isConnected || 
-                    isApproving || 
-                    isMinting || 
-                    mintingStep === 'approving' || 
+                    !isConnected ||
+                    isApproving ||
+                    isMinting ||
+                    mintingStep === 'approving' ||
                     mintingStep === 'minting' ||
-                    mintPrice === BigInt(0) ||
-                    publicMintActive === false ||
-                    isLoadingMintActive
+                    isStatusLoading ||
+                    !mintingWindowOpen ||
+                    mintPrice === undefined ||
+                    mintPrice === null
                   }
                   className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
-                    isConnected && 
+                    isConnected &&
                     !isApproving && 
                     !isMinting && 
                     mintingStep === 'idle' &&
-                    mintPrice !== BigInt(0) &&
-                    publicMintActive !== false &&
-                    !isLoadingMintActive
+                    mintPrice !== undefined &&
+                    mintPrice !== null &&
+                    mintingWindowOpen &&
+                    !isStatusLoading
                       ? 'cursor-pointer hover:brightness-110'
                       : 'cursor-not-allowed opacity-50'
                   }`}
                   style={
-                    isConnected && 
+                    isConnected &&
                     !isApproving && 
                     !isMinting && 
                     mintingStep === 'idle' &&
-                    mintPrice !== BigInt(0) &&
-                    publicMintActive !== false &&
-                    !isLoadingMintActive
+                    mintPrice !== undefined &&
+                    mintPrice !== null &&
+                    mintingWindowOpen &&
+                    !isStatusLoading
                       ? {
                           backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
                           border: "none",
@@ -315,12 +338,12 @@ const NFTMintDashboard: React.FC = () => {
                   }
                 >
                   {!isConnected
-                    ? 'Login to Mint'
-                    : isLoadingMintActive
+                    ? 'Please connect your wallet'
+                    : isStatusLoading
                     ? 'Checking Status...'
-                    : mintPrice === BigInt(0)
+                    : mintPrice === undefined || mintPrice === null
                     ? 'Mint Not Available'
-                    : publicMintActive === false
+                    : !mintingWindowOpen
                     ? 'Mint Not Active'
                     : mintingStep === 'approving' || isApproving
                     ? 'Approving USDT...'
@@ -338,11 +361,6 @@ const NFTMintDashboard: React.FC = () => {
                 )}
               </>
             )}
-            {!isConnected && (
-              <p className="text-xs text-gray-400 text-center mt-2">
-                *Connect your wallet to check eligibility.*
-              </p>
-            )}
           </div>
         </div>
 
@@ -359,19 +377,37 @@ const NFTMintDashboard: React.FC = () => {
 
           {/* Status Indicator */}
           <div className="flex items-center gap-3 mb-8">
-            {isMinted ? (
+            {hasMinted ? (
               <>
                 <CheckCircleOutlined className="text-green-500 text-2xl" />
                 <div>
-                  <p className="text-white font-semibold">Status: ACTIVE (Minted)</p>
+                  <p className="text-white font-semibold">Status: Lifetime Pro Activated</p>
+                </div>
+              </>
+            ) : !isConnected ? (
+              <>
+                <CloseCircleOutlined className="text-2xl" style={{ color: '#FF494A' }} />
+                <div>
+                  <p className="text-[#FF494A] font-semibold">Status: Connect wallet to see status</p>
                 </div>
               </>
             ) : (
               <>
-                <CloseCircleOutlined className="text-2xl" style={{ color: '#FF494A' }} />
-                <div>
-                  <p className="text-[#FF494A] font-semibold">Status: Inactive (Mint to Unlock)</p>
-                </div>
+                {(!publicMintActive && !(whitelistMintActive && isWhitelisted)) ? (
+                  <>
+                    <CloseCircleOutlined className="text-2xl" style={{ color: '#FF494A' }} />
+                    <div>
+                      <p className="text-[#FF494A] font-semibold">Status: Minting is not active</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <CloseCircleOutlined className="text-2xl" style={{ color: '#FF494A' }} />
+                    <div>
+                      <p className="text-[#FF494A] font-semibold">Status: Inactive (Mint to Unlock)</p>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -380,12 +416,12 @@ const NFTMintDashboard: React.FC = () => {
           <div className="space-y-4">
             {proBenefits.map((benefit, index) => (
               <div key={index} className="flex items-center gap-3">
-                {isMinted ? (
+            {hasMinted ? (
                   <CheckCircleOutlined className="text-green-500 text-lg" />
                 ) : (
                   <LockOutlined className="text-gray-500 text-lg" />
                 )}
-                <span className={`${isMinted ? 'text-white font-medium' : 'text-gray-400'}`}>{benefit}</span>
+                <span className={`${hasMinted ? 'text-white font-medium' : 'text-gray-400'}`}>{benefit}</span>
               </div>
             ))}
           </div>
@@ -397,7 +433,7 @@ const NFTMintDashboard: React.FC = () => {
               alt="Background Shield"
               className="w-65 h-65 object-contain rounded-xl"
               // style={{
-              //   filter: isMinted ? 'brightness(1.5) saturate(1.5)' : 'brightness(0.3) saturate(0.3)',
+              //   filter: hasMinted ? 'brightness(1.5) saturate(1.5)' : 'brightness(0.3) saturate(0.3)',
               // }}
             />
           </div>

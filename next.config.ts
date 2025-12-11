@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
   
   // Remove the problematic empty experimental block
   // experimental: {}, 
+  
+  // Add empty turbopack config to silence the warning when using webpack
+  turbopack: {},
 };
 
 export default nextConfig;

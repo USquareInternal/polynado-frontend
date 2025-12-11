@@ -52,7 +52,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
                 {/* 3. Page Content */}
                 {/* The main content now starts immediately below the header's height (h-16) */}
-                <main className="flex-1 p-4 sm:p-6 md:p-8">
+                <main className="flex-1">
                     {children}
                 </main>
                 <Footer />

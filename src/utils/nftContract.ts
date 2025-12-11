@@ -44,6 +44,115 @@ const getContractAddress = (): `0x${string}` | undefined => {
 export const getNFTContractAddress = () => getContractAddress();
 
 /**
+ * Hook to read USDT contract address and decimals from the NFT contract
+ */
+export const useUSDTMeta = () => {
+  const contractAddress = getContractAddress();
+
+  const usdtAddressResult = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'USDT',
+    query: {
+      enabled: !!contractAddress,
+    },
+  });
+
+  const usdtDecimalsResult = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'USDT_DECIMALS',
+    query: {
+      enabled: !!contractAddress,
+    },
+  });
+
+  return {
+    usdtAddress: usdtAddressResult.data as `0x${string}` | undefined,
+    usdtDecimals: typeof usdtDecimalsResult.data === 'bigint'
+      ? Number(usdtDecimalsResult.data)
+      : undefined,
+    isLoading: usdtAddressResult.isLoading || usdtDecimalsResult.isLoading,
+    error: usdtAddressResult.error || usdtDecimalsResult.error,
+    refetch: () => {
+      usdtAddressResult.refetch?.();
+      usdtDecimalsResult.refetch?.();
+    },
+  };
+};
+
+/**
+ * Hook to read ERC721 balance for an address
+ */
+export const useNFTBalance = (owner?: `0x${string}`) => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'balanceOf',
+    args: owner ? [owner] : undefined,
+    query: {
+      enabled: !!contractAddress && !!owner,
+    },
+  });
+
+  return {
+    balance: data as bigint | undefined,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook to check if whitelist minting is active
+ */
+export const useWhitelistMintActive = () => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'whitelistMintActive',
+    query: {
+      enabled: !!contractAddress,
+    },
+  });
+
+  return {
+    whitelistMintActive: data as boolean | undefined,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook to check if an address is whitelisted
+ */
+export const useWhitelistStatus = (owner?: `0x${string}`) => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'isWhitelisted',
+    args: owner ? [owner] : undefined,
+    query: {
+      enabled: !!contractAddress && !!owner,
+    },
+  });
+
+  return {
+    isWhitelisted: data as boolean | undefined,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+/**
  * Custom hook to read mint price from the NFT contract
  */
 export const useMintPrice = () => {
@@ -141,9 +250,6 @@ export const usePublicMintActive = () => {
 const getUSDTAddress = (): `0x${string}` | undefined => {
   const address = process.env.NEXT_PUBLIC_USDT_ADDRESS;
   if (!address || address === '0x0000000000000000000000000000000000000000') {
-    if (typeof window !== 'undefined') {
-      console.warn('USDT Contract Address not set in NEXT_PUBLIC_USDT_ADDRESS');
-    }
     return undefined;
   }
   return address as `0x${string}`;
@@ -152,9 +258,12 @@ const getUSDTAddress = (): `0x${string}` | undefined => {
 /**
  * Hook to approve USDT spending for NFT contract
  */
-export const useApproveUSDT = () => {
-  const usdtAddress = getUSDTAddress();
-  const nftContractAddress = getContractAddress();
+export const useApproveUSDT = (
+  usdtAddress?: `0x${string}`,
+  nftContractAddress?: `0x${string}`,
+) => {
+  const resolvedUsdt = usdtAddress ?? getUSDTAddress();
+  const resolvedNft = nftContractAddress ?? getContractAddress();
   
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -162,15 +271,15 @@ export const useApproveUSDT = () => {
   });
 
   const approveUSDT = async (amount: bigint) => {
-    if (!usdtAddress || !nftContractAddress) {
+    if (!resolvedUsdt || !resolvedNft) {
       throw new Error('USDT or NFT contract address not set');
     }
 
     writeContract({
-      address: usdtAddress,
+      address: resolvedUsdt,
       abi: ERC20_ABI,
       functionName: 'approve',
-      args: [nftContractAddress, amount],
+      args: [resolvedNft, amount],
     });
   };
 

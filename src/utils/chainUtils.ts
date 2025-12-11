@@ -7,13 +7,14 @@ import {
     avalanche,
     avalancheFuji,
 } from "wagmi/chains";
-import { defineChain } from 'viem';
+import { defineChain, http } from 'viem';
 import { Chain } from 'wagmi/chains';
 import {
     metaMaskWallet, trustWallet, walletConnectWallet, coinbaseWallet,
     binanceWallet, rainbowWallet, phantomWallet, rabbyWallet, ledgerWallet,
     okxWallet, braveWallet, argentWallet, uniswapWallet, safepalWallet,
 } from "@rainbow-me/rainbowkit/wallets";
+import type { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
 
 // --- Custom Chain Definitions ---
@@ -92,18 +93,28 @@ export const getNetwork = (): Chain => {
     }
 };
 
+// Single source of truth for the selected chain based on the env var.
+const selectedChain = getNetwork();
+const chains = [selectedChain] as [Chain];
+const transports = {
+    [selectedChain.id]: http(selectedChain.rpcUrls.default.http[0]),
+} as const;
+
 // ... (getWalletSymbol and getWalletChainId utilities remain here)
 
 
 // -------------------------------------------------------------------
 // --- CONFIG OPTIONS (Server-Safe object to be consumed by the client) ---
 // -------------------------------------------------------------------
-export const walletConfigOptions = {
+export const walletConfigOptions: Parameters<typeof getDefaultConfig>[0] = {
     appName: process.env.NEXT_PUBLIC_TITLE || "My App",
     projectId: process.env.NEXT_PUBLIC_PROJECT_ID || "",
 
-    // Use the static chain array to satisfy the type requirement
-    chains: allConfiguredChains,
+    // Use only the env-selected chain so we don't accidentally default to a testnet.
+    chains,
+
+    // Explicit transports keep RainbowKit/Wagmi aligned with the selected chain.
+    transports,
 
     wallets: [
         {

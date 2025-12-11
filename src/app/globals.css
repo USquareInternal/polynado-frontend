@@ -29,6 +29,11 @@ body {
 button {
   cursor: pointer;
 }
+
+/* Override Ant Design icon display */
+.anticon {
+  display: inline !important;
+}
 /* Override RainbowKit's border-radius variable */
 :root {
   --rk-radii-connectButton: 0.5rem !important;

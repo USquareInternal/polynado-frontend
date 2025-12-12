@@ -4,7 +4,7 @@ const footerLinks = ['Privacy', 'Terms of Use', 'Learn', 'Careers', 'Press'];
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="mt-10 border-t border-white/10 pt-4 pb-4 px-4 sm:px-6 md:px-8 text-xs bg-[#1E2022] text-gray-300">
+    <footer className=" border-t border-white/10 pt-4 pb-4 px-4 sm:px-6 md:px-8 text-xs bg-[#1E2022] text-gray-300">
       <div className="flex flex-wrap justify-between items-center gap-3">
         <p className="w-full sm:w-auto text-gray-300">Polynado Pvt Limited. © 2025</p>
 

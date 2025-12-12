@@ -34,8 +34,8 @@ const NavLink: React.FC<NavLinkProps> = ({
         >
             {/* 1. Icon Component (Visible on Desktop/Large Screens, Hidden on Mobile/Small Screens) */}
             <span className="hidden sm:block">
-                {/* Increased icon size to w-8 h-8 (32px x 32px) on desktop */}
-                <IconComponent className={`sm:w-8 sm:h-8 transition-colors ${
+                {/* Increased icon size to w-10 h-10 (40px x 40px) on desktop */}
+                <IconComponent className={`sm:w-10 sm:h-10 sm:text-2xl transition-colors ${
                     isActive ? 'text-orange-400' : 'text-gray-400 group-hover:text-white'
                 }`} />
             </span>

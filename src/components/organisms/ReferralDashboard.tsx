@@ -36,7 +36,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
       description: 'All referrals are tracked automatically and displayed in real-time on your dashboard.',
     },
     {
-      image: '/NFT.svg',
+      image: '/NFT.png',
       title: 'Subscription Referral',
       description: 'Earn $50 for every subscription signup through your referral link.',
     },

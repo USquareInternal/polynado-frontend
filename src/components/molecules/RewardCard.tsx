@@ -44,7 +44,7 @@ export const RewardCard: React.FC<RewardCardProps> = ({ image, title, descriptio
           <div className="flex justify-center">
             <div
               className="rounded-[10px] overflow-hidden shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
-              style={{ width: 320, height: 230.85043334960938 }}
+              style={{ width:"100%", height: 230.85043334960938 }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img

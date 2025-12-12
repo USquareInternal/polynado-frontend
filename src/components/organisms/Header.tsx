@@ -1,9 +1,11 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MenuOutlined } from '@ant-design/icons'; // Import Ant Design Icon for the hamburger
-import { Heading } from '@/components/atoms/Heading'; // Assuming you want to keep this import
-import WalletConnect from '../molecules/WalletConnectButton'; // Assuming this is your actual WalletConnect component
+import { MenuOutlined } from '@ant-design/icons';
+import { Heading } from '@/components/atoms/Heading';
+import WalletConnect from '../molecules/WalletConnectButton';
+import UserDropdown from '../molecules/UserDropdown';
+import { getToken, getUserData } from '@/services/authService';
 
 // Define the type for the component's props
 interface HeaderProps {
@@ -25,10 +27,27 @@ export const Header: React.FC<HeaderProps> = ({
   onConnect,
   onDisconnect,
 }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [referralId, setReferralId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = getToken();
+    const userData = getUserData();
+    
+    if (token && userData) {
+      setIsLoggedIn(true);
+      setUserEmail(userData.email);
+      setReferralId(userData.reffralId || null);
+    } else {
+      setIsLoggedIn(false);
+      setUserEmail(null);
+      setReferralId(null);
+    }
+  }, []);
+
   return (
-    // The main header container: Fixed, full width, high z-index, and background color.
-    // NOTE: The previous version used 'p-4' here. I'm reverting to the 'py-3' and 'px-6' 
-    // from your first code block for a more compact, border-inclusive look.
     <header
       className="fixed top-0 left-0 right-0 z-50 w-full py-3 border-b border-gray-700 lg:left-20 lg:w-[calc(100%-5rem)]"
       style={{ backgroundColor: '#1E2022' }}
@@ -43,7 +62,6 @@ export const Header: React.FC<HeaderProps> = ({
             className="lg:hidden p-2 rounded-lg hover:bg-gray-700 text-white"
             aria-label="Open sidebar menu"
           >
-            {/* Using Ant Design Icon as requested in the previous context, or use a path if not available */}
             <MenuOutlined className="w-6 h-6" />
           </button>
 
@@ -53,20 +71,31 @@ export const Header: React.FC<HeaderProps> = ({
           </h2>
         </div>
 
-        {/* === Right Section: Login & Wallet Connect Buttons === */}
+        {/* === Right Section: User Info/Login & Wallet Connect Buttons === */}
         <div className="flex items-center gap-3">
-          {/* Login Button */}
-          <Link href="/login">
-            <button
-              className="px-4 py-2 rounded-lg font-medium transition-all duration-150 text-white border border-gray-600 hover:border-gray-500 hover:bg-gray-800/50 bg-transparent"
-              style={{ 
-                backgroundColor: 'transparent',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-              }}
-            >
-              Login
-            </button>
-          </Link>
+          {isLoggedIn && userEmail && referralId ? (
+            // Display user dropdown when logged in
+            <UserDropdown userEmail={userEmail} referralId={referralId} />
+          ) : (
+            // Login Button with orange gradient
+            <Link href="/login">
+              <button
+                className="px-4 py-2 rounded-lg font-semibold text-white transition-all duration-150 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
+                style={{
+                  backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                  boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.filter = 'brightness(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.filter = 'brightness(1)';
+                }}
+              >
+                Login
+              </button>
+            </Link>
+          )}
           {/* Pass the required props down to WalletConnect */}
           <WalletConnect
             onConnect={onConnect}

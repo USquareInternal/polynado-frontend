@@ -1,15 +1,45 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { login, storeToken, storeUserData } from '@/services/authService';
+import { showSuccessToast, showErrorToast } from '@/utils/toast';
 
 const LoginPage: React.FC = () => {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', { email, password });
+    
+    if (!email.trim() || !password.trim()) {
+      showErrorToast('Please enter both email and password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await login({
+        email: email.trim(),
+        password: password,
+      });
+
+      if (response.success) {
+        storeToken(response.token);
+        storeUserData(response.user);
+        showSuccessToast('Login successful!');
+        // Navigate to home page
+        setTimeout(() => {
+          router.push('/');
+        }, 1000);
+      }
+    } catch (error: any) {
+      showErrorToast(error.message || 'Failed to login. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -104,18 +134,23 @@ const LoginPage: React.FC = () => {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full py-3 rounded-lg font-semibold text-white transition-all duration-150 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
+              disabled={isLoading}
+              className="w-full py-3 rounded-lg font-semibold text-white transition-all duration-150 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: '#DB7A23',
+                backgroundColor: isLoading ? '#666666' : '#DB7A23',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#E88A33';
+                if (!isLoading) {
+                  e.currentTarget.style.backgroundColor = '#E88A33';
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#DB7A23';
+                if (!isLoading) {
+                  e.currentTarget.style.backgroundColor = '#DB7A23';
+                }
               }}
             >
-              Login
+              {isLoading ? 'Logging in...' : 'Login'}
             </button>
 
             {/* Forget Password & Create Account Links */}

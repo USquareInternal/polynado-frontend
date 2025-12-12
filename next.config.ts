@@ -1,39 +1,42 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
+  // reactCompiler: true, // Keep this if you need it
   
-  // 🎯 Add the webpack configuration block to force Webpack logic
-  // and handle server-side specific dependencies.
-  webpack: (config, { isServer }) => {
-    // This is necessary to stop Next.js/Turbopack from trying to bundle 
-    // server-side logging transports (pino/thread-stream) that are not 
-    // designed to run in a browser environment.
+  // Acknowledge the webpack config to avoid console warnings when using 'next build'
+  // (though the --webpack flag in package.json is the main fix).
+  turbopack: {},
+  
+  webpack: (config, { isServer, webpack }) => {
+    
+    // ============ Recommended Fix: IgnorePlugin (Targeting the Root Cause) ============
     if (isServer) {
+        // Explicitly ignore files and directories inside node_modules/thread-stream/
+        // that are causing errors (tests, benchmarks, docs, license).
+        config.plugins.push(
+            new webpack.IgnorePlugin({
+                resourceRegExp: /thread-stream\/(?:test|bench|README|LICENSE)/,
+                contextRegExp: /node_modules/,
+            })
+        );
+    }
+    
+    // ============ Optional: Externalizing Server-Only Modules ============
+    if (isServer) {
+      // This helps prevent bundling of native Node.js libraries
       config.externals.push(
         'pino-transport',
         'thread-stream',
         'pino-elasticsearch',
-        // Excluding 'tap' and 'desm' as they are test dependencies that Turbopack is trying to bundle
+        // Externalize test-only dependencies that are causing module-not-found errors
         'tap',
-        'desm'
+        'desm',
+        'fastbench' 
       );
     }
-    
-    // Ensure all test files/directories are explicitly ignored (a good practice)
-    config.module.rules.push({
-      test: /thread-stream\/test/,
-      use: 'null-loader', // Prevents bundling of these files
-    });
 
     return config;
   },
-  
-  // Remove the problematic empty experimental block
-  // experimental: {}, 
-  
-  // Add empty turbopack config to silence the warning when using webpack
-  turbopack: {},
 };
 
 export default nextConfig;

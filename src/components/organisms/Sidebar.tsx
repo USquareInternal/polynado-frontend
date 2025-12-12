@@ -12,6 +12,7 @@ import {
     GiftOutlined,
     TeamOutlined,
     CrownOutlined,
+    RobotOutlined,
 } from '@ant-design/icons';
 
 
@@ -27,6 +28,7 @@ const navItems = [
     { name: 'NFT Mint', href: '/nft-mint', icon: GiftOutlined },
     { name: 'Referral', href: '/referral', icon: TeamOutlined },
     { name: 'Subscription', href: '/subscription', icon: CrownOutlined },
+    { name: 'AI Chatbot', href: '/polynado-chatbot', icon: RobotOutlined },
 ];
 
 

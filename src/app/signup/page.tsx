@@ -1,13 +1,18 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { verifyReferralCode, signup, storeToken, storeUserData } from '@/services/authService';
+import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
 
 type SignupStep = 1 | 2 | 3;
 
 const SignupPage: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<SignupStep>(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [referralVerified, setReferralVerified] = useState(false);
   const [formData, setFormData] = useState({
     referralCode: '',
     termsAccepted: false,
@@ -16,9 +21,55 @@ const SignupPage: React.FC = () => {
     confirmPassword: '',
   });
 
-  const handleNext = () => {
-    if (step < 3) {
-      setStep((step + 1) as SignupStep);
+  // Auto-fill referral code from URL parameter
+  useEffect(() => {
+    const refParam = searchParams.get('ref');
+    if (refParam) {
+      setFormData(prev => ({ ...prev, referralCode: refParam }));
+      // Auto-verify if referral code is provided in URL
+      if (refParam.trim()) {
+        verifyReferralCode(refParam.trim())
+          .then((response) => {
+            if (response.success) {
+              setReferralVerified(true);
+            }
+          })
+          .catch(() => {
+            // Silently fail - user can still proceed
+          });
+      }
+    }
+  }, [searchParams]);
+
+  const handleNext = async () => {
+    if (step === 1) {
+      // Verify referral code before proceeding
+      if (!formData.referralCode.trim()) {
+        showWarningToast('Please enter a referral code');
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await verifyReferralCode(formData.referralCode.trim());
+        if (response.success) {
+          setReferralVerified(true);
+          showSuccessToast('Referral code verified successfully');
+          setStep(2);
+        } else {
+          showErrorToast(response.message || 'Invalid referral code');
+        }
+      } catch (error: any) {
+        showErrorToast(error.message || 'Failed to verify referral code');
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (step === 2) {
+      if (formData.termsAccepted) {
+        setStep(3);
+      } else {
+        showWarningToast('Please accept the Terms & Conditions');
+      }
     }
   };
 
@@ -28,13 +79,43 @@ const SignupPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSkipReferral = () => {
+    setFormData({ ...formData, referralCode: '' });
+    setReferralVerified(false);
+    setStep(2);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 3) {
-      // Handle final submission
-      console.log('Signup data:', formData);
-      // Navigate to home page
-      router.push('/');
+      // Validate password match
+      if (formData.password !== formData.confirmPassword) {
+        showErrorToast('Passwords do not match');
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await signup({
+          email: formData.email,
+          password: formData.password,
+          refferedBy: formData.referralCode.trim() || null,
+        });
+
+        if (response.success) {
+          storeToken(response.token);
+          storeUserData(response.user);
+          showSuccessToast('Account created successfully!');
+          // Navigate to home page
+          setTimeout(() => {
+            router.push('/');
+          }, 1000);
+        }
+      } catch (error: any) {
+        showErrorToast(error.message || 'Failed to create account');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -46,30 +127,45 @@ const SignupPage: React.FC = () => {
           Enter your Referral Link
         </h1>
         <p className="text-gray-400 text-sm">
-          You must enter the referral link to continue
+          Have a referral code? Enter it below or skip to continue
         </p>
       </div>
 
       <div>
         <label htmlFor="referralCode" className="block text-sm font-medium text-gray-300 mb-2">
-          Referral Link (Required)
+          Referral Code (Optional)
         </label>
-        <input
-          id="referralCode"
-          type="text"
-          value={formData.referralCode}
-          onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
-          required
-          className="w-full px-4 py-3 rounded-lg bg-black/40 border border-gray-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all"
-          placeholder="Enter your referral link (required)"
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-          }}
-        />
-        <p className="text-gray-400 text-xs mt-2">
-          You must enter the referral link to continue
-        </p>
+        <div className="relative">
+          <input
+            id="referralCode"
+            type="text"
+            value={formData.referralCode}
+            onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
+            disabled={referralVerified || isLoading}
+            className="w-full px-4 py-3 rounded-lg bg-black/40 border text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            placeholder="Enter your referral code (optional)"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              borderColor: referralVerified ? 'rgba(34, 197, 94, 0.5)' : 'rgba(255, 255, 255, 0.2)',
+            }}
+          />
+          {referralVerified && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
+        </div>
+        {referralVerified ? (
+          <p className="text-green-400 text-xs mt-2">
+            ✓ Referral code verified successfully
+          </p>
+        ) : (
+          <p className="text-gray-400 text-xs mt-2">
+            Enter a referral code to get started, or skip to continue without one
+          </p>
+        )}
       </div>
 
       <div className="flex gap-3 pt-4">
@@ -83,28 +179,70 @@ const SignupPage: React.FC = () => {
         >
           BACK
         </Link>
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={!formData.referralCode.trim()}
-          className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
-          style={{
-            backgroundColor: formData.referralCode.trim() ? '#DB7A23' : '#666666',
-          }}
-          onMouseEnter={(e) => {
-            if (formData.referralCode.trim()) {
-              e.currentTarget.style.backgroundColor = '#E88A33';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (formData.referralCode.trim()) {
-              e.currentTarget.style.backgroundColor = '#DB7A23';
-            }
-          }}
-        >
-         NEXT
-        </button>
+        {formData.referralCode.trim() ? (
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={isLoading}
+            className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
+            style={{
+              backgroundColor: !isLoading ? '#DB7A23' : '#666666',
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = '#E88A33';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = '#DB7A23';
+              }
+            }}
+          >
+            {isLoading ? 'Verifying...' : 'NEXT'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSkipReferral}
+            disabled={isLoading}
+            className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
+            style={{
+              backgroundImage: isLoading 
+                ? 'none' 
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+              backgroundColor: isLoading ? '#666666' : 'transparent',
+              boxShadow: isLoading ? 'none' : '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.filter = 'brightness(1.1)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.filter = 'brightness(1)';
+              }
+            }}
+          >
+            SKIP
+          </button>
+        )}
       </div>
+
+      {/* Skip link below buttons */}
+      {formData.referralCode.trim() && (
+        <div className="text-center pt-2">
+          <button
+            type="button"
+            onClick={handleSkipReferral}
+            disabled={isLoading}
+            className="text-sm text-gray-400 hover:text-orange-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            Skip referral code
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -234,18 +372,18 @@ const SignupPage: React.FC = () => {
         <button
           type="button"
           onClick={handleNext}
-          disabled={!formData.termsAccepted}
+          disabled={!formData.termsAccepted || isLoading}
           className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
           style={{
-            backgroundColor: formData.termsAccepted ? '#DB7A23' : '#666666',
+            backgroundColor: formData.termsAccepted && !isLoading ? '#DB7A23' : '#666666',
           }}
           onMouseEnter={(e) => {
-            if (formData.termsAccepted) {
+            if (formData.termsAccepted && !isLoading) {
               e.currentTarget.style.backgroundColor = '#E88A33';
             }
           }}
           onMouseLeave={(e) => {
-            if (formData.termsAccepted) {
+            if (formData.termsAccepted && !isLoading) {
               e.currentTarget.style.backgroundColor = '#DB7A23';
             }
           }}
@@ -439,11 +577,12 @@ const SignupPage: React.FC = () => {
             !formData.email ||
             !formData.password ||
             formData.password !== formData.confirmPassword ||
-            !Object.values(passwordRequirements).every(Boolean)
+            !Object.values(passwordRequirements).every(Boolean) ||
+            isLoading
           }
           className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
           style={{
-            backgroundColor: formData.email && formData.password && formData.password === formData.confirmPassword && Object.values(passwordRequirements).every(Boolean) ? '#DB7A23' : '#666666',
+            backgroundColor: formData.email && formData.password && formData.password === formData.confirmPassword && Object.values(passwordRequirements).every(Boolean) && !isLoading ? '#DB7A23' : '#666666',
           }}
           onMouseEnter={(e) => {
             if (!e.currentTarget.disabled) {
@@ -456,7 +595,7 @@ const SignupPage: React.FC = () => {
             }
           }}
         >
-          CONTINUE
+          {isLoading ? 'Creating Account...' : 'CONTINUE'}
         </button>
       </div>
     </form>

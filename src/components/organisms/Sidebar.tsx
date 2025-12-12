@@ -67,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {/* 2. Logo Container */}
                 <div className={logoContainerClasses}>
 
-                    <span className="flex items-center h-full mb-8 pt-5 lg:flex lg:justify-center">
+                    <span className="flex items-center mt-8  h-full mb-8 pt-5 lg:flex lg:justify-center">
                         <img
                             src='/image 7.svg'
                             alt="Logo"
@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* Navigation Links */}
-                <nav className="p-4 space-y-2 lg:p-2 lg:space-y-4">
+                <nav className="p-4 mt-8 space-y-2 lg:p-2 lg:space-y-4">
                     {navItems.map(item => {
                         const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                         return (

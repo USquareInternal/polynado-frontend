@@ -3,20 +3,43 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { useAccount, useReadContract } from 'wagmi';
 import { LockOutlined, CheckCircleOutlined, CloseCircleOutlined, SettingOutlined } from '@ant-design/icons';
-import { useMintPrice, useMaxSupply, useRemainingSupply, useApproveUSDT, useMintNFT, usePublicMintActive, getNFTContractAddress, useWhitelistMintActive, useWhitelistStatus, useNFTBalance, useUSDTMeta } from '@/utils/nftContract';
+import {
+  useApproveUSDT,
+  usePublicMintActive,
+  getNFTContractAddress,
+  useWhitelistMintActive,
+  useWhitelistStatus,
+  useNFTBalance,
+  useUSDTMeta,
+  usePublicMint,
+  useWhitelistMint,
+  useCollectionInfo,
+  useCollectionSupply,
+} from '@/utils/nftContract';
+import { showSuccessAlert,showFailedAlert } from "@/utils/SweetAlertUtils";
 
 const NFTMintDashboard: React.FC = () => {
   const { isConnected, address } = useAccount();
   const [mintingStep, setMintingStep] = useState<'idle' | 'approving' | 'minting' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [standardError, setStandardError] = useState<string | null>(null);
+  const [proError, setProError] = useState<string | null>(null);
 
-  // Read contract data
-  const { mintPrice, isLoading: isLoadingPrice, error: priceError } = useMintPrice();
-  const { maxSupply, isLoading: isLoadingMaxSupply, error: maxSupplyError } = useMaxSupply();
-  const { remainingSupply, isLoading: isLoadingRemainingSupply, error: remainingSupplyError, refetch: refetchRemainingSupply } = useRemainingSupply();
-  const { publicMintActive, isLoading: isLoadingMintActive } = usePublicMintActive();
-  const { whitelistMintActive, isLoading: isLoadingWhitelistActive } = useWhitelistMintActive();
-  const { isWhitelisted, isLoading: isLoadingWhitelistStatus, refetch: refetchWhitelistStatus } = useWhitelistStatus(address as `0x${string}` | undefined);
+  // Derive a userId (login not wired yet)
+  const userId = React.useMemo(
+    () => (address ? address : `guest-${Math.random().toString(36).slice(2, 8)}`),
+    [address]
+  );
+
+  // Read contract data (per collection)
+  const { collection: standardCollection, isLoading: isLoadingStandardCollection } = useCollectionInfo(1);
+  const { collection: proCollection, isLoading: isLoadingProCollection } = useCollectionInfo(2);
+  const { current: standardCurrent, max: standardMax, isLoading: isLoadingStandardSupply, refetch: refetchStandardSupply } = useCollectionSupply(1);
+  const { current: proCurrent, max: proMax, isLoading: isLoadingProSupply, refetch: refetchProSupply } = useCollectionSupply(2);
+  const { publicMintActive: publicMintActiveStandard, isLoading: isLoadingMintActiveStandard } = usePublicMintActive(1);
+  const { publicMintActive: publicMintActivePro, isLoading: isLoadingMintActivePro } = usePublicMintActive(2);
+  const { whitelistMintActive: whitelistMintActiveStandard, isLoading: isLoadingWhitelistActiveStandard } = useWhitelistMintActive(1);
+  const { whitelistMintActive: whitelistMintActivePro, isLoading: isLoadingWhitelistActivePro } = useWhitelistMintActive(2);
+  const { isWhitelisted, isLoading: isLoadingWhitelistStatus, refetch: refetchWhitelistStatus } = useWhitelistStatus(userId);
   const { balance, isLoading: isLoadingBalance, refetch: refetchBalance } = useNFTBalance(address as `0x${string}` | undefined);
   const { usdtAddress: usdtAddressFromContract, usdtDecimals, isLoading: isLoadingUsdtMeta } = useUSDTMeta();
 
@@ -27,7 +50,9 @@ const NFTMintDashboard: React.FC = () => {
 
   // Write hooks for minting
   const { approveUSDT, isPending: isApproving, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useApproveUSDT(usdtAddress, nftContractAddress);
-  const { mint, isPending: isMinting, isSuccess: isMintSuccess, error: mintError, reset: resetMint } = useMintNFT();
+  const { publicMint, isPending: isPublicMinting, isSuccess: isPublicMintSuccess, error: publicMintError, reset: resetPublicMint } = usePublicMint();
+  const { whitelistMint, isPending: isWhitelistMinting, isSuccess: isWhitelistMintSuccess, error: whitelistMintError, reset: resetWhitelistMint } = useWhitelistMint();
+  const isMinting = isPublicMinting || isWhitelistMinting;
   
   const { data: allowance } = useReadContract({
     address: usdtAddress,
@@ -51,67 +76,49 @@ const NFTMintDashboard: React.FC = () => {
   });
 
   const hasMinted = (balance ?? BigInt(0)) > BigInt(0);
-  const whitelistBlocked = isWhitelisted === true && whitelistMintActive === false;
-  const whitelistReady = isWhitelisted === true && whitelistMintActive === true;
-  const mintingWindowOpen =
-    isWhitelisted === true
-      ? whitelistReady || publicMintActive === true
-      : publicMintActive === true;
+
+  const standardMintPrice = standardCollection?.mintPrice;
+  const proMintPrice = proCollection?.mintPrice;
+
+  const whitelistBlockedStandard = isWhitelisted === true && whitelistMintActiveStandard === false;
+  const whitelistBlockedPro = isWhitelisted === true && whitelistMintActivePro === false;
+  const whitelistReadyStandard = isWhitelisted === true && whitelistMintActiveStandard === true;
+  const whitelistReadyPro = isWhitelisted === true && whitelistMintActivePro === true;
+
+  const mintingWindowOpenStandard =
+    isWhitelisted === true ? whitelistReadyStandard || publicMintActiveStandard === true : publicMintActiveStandard === true;
+  const mintingWindowOpenPro =
+    isWhitelisted === true ? whitelistReadyPro || publicMintActivePro === true : publicMintActivePro === true;
+
   const isStatusLoading =
-    isLoadingMintActive ||
-    isLoadingWhitelistActive ||
+    isLoadingMintActiveStandard ||
+    isLoadingMintActivePro ||
+    isLoadingWhitelistActiveStandard ||
+    isLoadingWhitelistActivePro ||
     isLoadingWhitelistStatus ||
     isLoadingBalance ||
     (!usdtEnvAddress && isLoadingUsdtMeta);
 
   // Debug logging
   useEffect(() => {
-    console.log('Contract Data:', {
-      mintPrice,
-      maxSupply,
-      remainingSupply,
-      isLoadingPrice,
-      isLoadingMaxSupply,
-      isLoadingRemainingSupply,
-      priceError,
-      maxSupplyError,
-      remainingSupplyError,
-      whitelistMintActive,
-      isWhitelisted,
-      balance,
-      contractAddress: process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS,
+    console.log('Collection data', {
+      standardCollection,
+      proCollection,
+      standardSupply: { current: standardCurrent, max: standardMax },
+      proSupply: { current: proCurrent, max: proMax },
     });
-  }, [mintPrice, maxSupply, remainingSupply, isLoadingPrice, isLoadingMaxSupply, isLoadingRemainingSupply, priceError, maxSupplyError, remainingSupplyError, whitelistMintActive, isWhitelisted, balance]);
+  }, [standardCollection, proCollection, standardCurrent, standardMax, proCurrent, proMax]);
 
 
-  // Format mint price (assuming USDT with 6 decimals)
-  const formattedPrice = useMemo(() => {
-    if (isLoadingPrice) return 'Loading...';
-    if (priceError) return 'N/A';
-    if (mintPrice === undefined || mintPrice === null) return 'N/A';
+  const formatPrice = (raw?: bigint) => {
+    if (raw === undefined || raw === null) return 'N/A';
     const decimals = usdtDecimals ?? 6;
     const divisor = 10 ** decimals;
-    const priceInUSDT = Number(mintPrice) / divisor;
-    return `${priceInUSDT.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
-  }, [mintPrice, isLoadingPrice, priceError, usdtDecimals]);
-
-  // Format max supply
-  const formattedMaxSupply = useMemo(() => {
-    if (isLoadingMaxSupply) return 'Loading...';
-    if (maxSupplyError || maxSupply === undefined) return 'N/A';
-    console.log(maxSupply);
-    return maxSupply.toString();
-  }, [maxSupply, isLoadingMaxSupply, maxSupplyError]);
-
-  // Format remaining supply
-  const formattedRemainingSupply = useMemo(() => {
-    if (isLoadingRemainingSupply) return 'Loading...';
-    if (remainingSupplyError || remainingSupply === undefined) return 'N/A';
-    console.log(remainingSupply);
-    return remainingSupply.toString();
-  }, [remainingSupply, isLoadingRemainingSupply, remainingSupplyError]);
-
-  const isLoading = isLoadingPrice || isLoadingMaxSupply || isLoadingRemainingSupply;
+    const val = Number(raw) / divisor;
+    return `${val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
+  };
+  const formattedStandardPrice = formatPrice(standardMintPrice);
+  const formattedProPrice = formatPrice(proMintPrice);
 
   const proBenefits = [
     'Unlimited Advanced Analytics',
@@ -120,92 +127,157 @@ const NFTMintDashboard: React.FC = () => {
     'Private Community Pass',
   ];
 
-  // Calculate supply metrics for both tiers
-  const standardMaxSupply = maxSupply ? Number(maxSupply) : 100;
-  const standardRemainingSupply = remainingSupply ? Number(remainingSupply) : 75;
-  const standardMinted = standardMaxSupply - standardRemainingSupply;
-  const standardProgress = standardMaxSupply > 0 ? (standardMinted / standardMaxSupply) * 100 : 0;
+  const standardMaxSupply = standardMax ? Number(standardMax) : undefined;
+  const standardRemainingSupply = standardMax !== undefined && standardCurrent !== undefined ? Number(standardMax - standardCurrent) : undefined;
+  const standardProgress = standardMax && standardCurrent !== undefined && standardMax > 0 ? (Number(standardCurrent) / Number(standardMax)) * 100 : 0;
 
-  const proMaxSupply = maxSupply ? Number(maxSupply) : 100;
-  const proRemainingSupply = remainingSupply ? Number(remainingSupply) : 75;
-  const proMinted = proMaxSupply - proRemainingSupply;
-  const proProgress = proMaxSupply > 0 ? (proMinted / proMaxSupply) * 100 : 0;
+  const proMaxSupply = proMax ? Number(proMax) : undefined;
+  const proRemainingSupply = proMax !== undefined && proCurrent !== undefined ? Number(proMax - proCurrent) : undefined;
+  const proProgress = proMax && proCurrent !== undefined && proMax > 0 ? (Number(proCurrent) / Number(proMax)) * 100 : 0;
+
+  // Track pending mint request details (per collection)
+  const [pendingCollectionId, setPendingCollectionId] = useState<number | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const isStandardProcessing =
+    pendingCollectionId === 1 &&
+    (mintingStep === 'approving' || mintingStep === 'minting' || isApproving || isMinting);
+  const isProProcessing =
+    pendingCollectionId === 2 &&
+    (mintingStep === 'approving' || mintingStep === 'minting' || isApproving || isMinting);
+
+  const standardButtonEnabled =
+    isConnected &&
+    !whitelistBlockedStandard &&
+    !isStandardProcessing &&
+    standardMintPrice !== undefined &&
+    standardMintPrice !== null &&
+    mintingWindowOpenStandard &&
+    !isStatusLoading &&
+    !hasMinted;
+
+  const proButtonEnabled =
+    isConnected &&
+    !whitelistBlockedPro &&
+    !isProProcessing &&
+    proMintPrice !== undefined &&
+    proMintPrice !== null &&
+    mintingWindowOpenPro &&
+    !isStatusLoading &&
+    !hasMinted;
 
   // Handle approve success - proceed to mint
   useEffect(() => {
     if (isApproveSuccess && mintingStep === 'approving') {
       setMintingStep('minting');
-      handleMintAfterApprove();
+      if (pendingCollectionId !== null && pendingUserId) {
+        handleMintAfterApprove(pendingCollectionId, pendingUserId);
+      }
     }
-  }, [isApproveSuccess, mintingStep]);
+  }, [isApproveSuccess, mintingStep, pendingCollectionId, pendingUserId]);
 
   // Handle mint success
   useEffect(() => {
-    if (isMintSuccess && mintingStep === 'minting') {
+    const succeeded = (isPublicMintSuccess || isWhitelistMintSuccess) && mintingStep === 'minting';
+    if (succeeded) {
       setMintingStep('success');
       refetchBalance?.();
-      refetchRemainingSupply?.();
+      refetchStandardSupply?.();
+      refetchProSupply?.();
+      setPendingCollectionId(null);
+      setPendingUserId(null);
     }
-  }, [isMintSuccess, mintingStep, refetchBalance, refetchRemainingSupply]);
+  }, [isPublicMintSuccess, isWhitelistMintSuccess, mintingStep, refetchBalance, refetchStandardSupply, refetchProSupply]);
+
+  // Helper to assign error to the correct tier
+  const setTierError = (collectionId: number | null, message: string | null) => {
+    if (collectionId === 1) {
+      setStandardError(message);
+    } else if (collectionId === 2) {
+      setProError(message);
+    } else {
+      // Fallback: apply to both if we don't know which tier
+      setStandardError(message);
+      setProError(message);
+    }
+  };
 
   // Handle errors
   useEffect(() => {
     if (approveError) {
       setMintingStep('error');
-      setErrorMessage(approveError.message || 'Approval failed');
+      setTierError(pendingCollectionId, approveError.message || 'Approval failed');
     }
-    if (mintError) {
+    if (publicMintError || whitelistMintError) {
       setMintingStep('error');
-      setErrorMessage(mintError.message || 'Minting failed');
+      setTierError(
+        pendingCollectionId,
+        publicMintError?.message || whitelistMintError?.message || 'Minting failed'
+      );
     }
-  }, [approveError, mintError]);
+  }, [approveError, publicMintError, whitelistMintError, pendingCollectionId]);
 
-  const handleMintAfterApprove = async () => {
+  const handleMintAfterApprove = async (collectionId: number, user: string) => {
     try {
-      await mint(1, 'ADMIN');
+      if (isWhitelisted) {
+        await whitelistMint(user, collectionId);
+      } else {
+        await publicMint(user, collectionId);
+      }
     } catch (error: any) {
       setMintingStep('error');
-      setErrorMessage(error?.message || 'Minting failed');
+      setTierError(collectionId, error?.message || 'Minting failed');
+      showFailedAlert(
+        `Something Went Wrong. Please try again.`,
+    );
     }
   };
 
-  const handleMint = async () => {
+  const handleMint = async (collectionId: number) => {
     if (!isConnected || !address) {
-      setErrorMessage('Please connect your wallet');
+      setTierError(collectionId, 'Please connect your wallet');
       return;
     }
 
-    const whitelistReadyLocal = whitelistMintActive === true && isWhitelisted === true;
+    const whitelistReadyLocal =
+      (collectionId === 1 ? whitelistReadyStandard : whitelistReadyPro) === true;
+    const whitelistBlockedLocal =
+      collectionId === 1 ? whitelistBlockedStandard : whitelistBlockedPro;
+    const mintingWindowOpenLocal =
+      collectionId === 1 ? mintingWindowOpenStandard : mintingWindowOpenPro;
+
     const mintingAllowed =
       !hasMinted &&
-      !whitelistBlocked &&
-      (publicMintActive === true || whitelistReadyLocal);
+      !whitelistBlockedLocal &&
+      (mintingWindowOpenLocal === true || whitelistReadyLocal);
 
     if (!mintingAllowed) {
-      setErrorMessage('Minting is not active.');
+      setTierError(collectionId, 'Minting is not active.');
       return;
     }
 
-    // Validate contract state before minting
+    const collection = collectionId === 1 ? standardCollection : proCollection;
+    const mintPrice = collection?.mintPrice;
     if (mintPrice === undefined || mintPrice === null) {
-      setErrorMessage('Unable to fetch mint price. Please try again.');
+      setTierError(collectionId, 'Unable to fetch mint price. Please try again.');
       return;
     }
 
     // Check if public mint is active
-    if (!mintingWindowOpen) {
-      setErrorMessage('Minting is not currently active.');
+    if (!mintingWindowOpenLocal) {
+      setTierError(collectionId, 'Minting is not currently active.');
       return;
     }
 
-    if (mintingWindowOpen === undefined && !isStatusLoading) {
-      setErrorMessage('Unable to check mint status. Please try again.');
+    if (mintingWindowOpenLocal === undefined && !isStatusLoading) {
+      setTierError(collectionId, 'Unable to check mint status. Please try again.');
       return;
     }
 
     try {
-      setErrorMessage(null);
+      setTierError(collectionId, null);
       setMintingStep('approving');
+      setPendingCollectionId(collectionId);
+      setPendingUserId(userId);
 
       // Check if we need to approve (allowance is less than mint price)
       const needsApproval = !allowance || allowance < mintPrice;
@@ -217,20 +289,23 @@ const NFTMintDashboard: React.FC = () => {
       } else {
         // Already approved, proceed directly to mint
         setMintingStep('minting');
-        await handleMintAfterApprove();
+        await handleMintAfterApprove(collectionId, userId);
       }
     } catch (error: any) {
       setMintingStep('error');
       // Parse error message for better user feedback
       const errorMsg = error?.message || error?.shortMessage || 'Transaction failed';
       if (errorMsg.includes('MintPriceNotSet')) {
-        setErrorMessage('Mint price is not set in the contract. Please contact the contract owner.');
+        setTierError(collectionId, 'Mint price is not set in the contract. Please contact the contract owner.');
       } else if (errorMsg.includes('PublicMintNotActive')) {
-        setErrorMessage('Public minting is not currently active.');
+        setTierError(collectionId, 'Public minting is not currently active.');
       } else if (errorMsg.includes('InsufficientPayment')) {
-        setErrorMessage('Insufficient USDT balance or allowance.');
+        setTierError(collectionId, 'Insufficient USDT balance or allowance.');
       } else {
-        setErrorMessage(errorMsg);
+        setTierError(collectionId, errorMsg);
+        showFailedAlert(
+          `Something Went Wrong. Please try again.`,
+      );
       }
       console.error('Mint error:', error);
     }
@@ -273,13 +348,13 @@ const NFTMintDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-white mb-1">Supply Remaining</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingRemainingSupply ? '...' : standardRemainingSupply}
+                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : (standardRemainingSupply ?? 'N/A')}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-white mb-1">Max Supply</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingMaxSupply ? '...' : standardMaxSupply}
+                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : (standardMaxSupply ?? 'N/A')}
                 </p>
               </div>
             </div>
@@ -295,48 +370,18 @@ const NFTMintDashboard: React.FC = () => {
 
           {/* Mint Button */}
           <button
-            onClick={handleMint}
-            disabled={
-              !isConnected ||
-              whitelistBlocked ||
-              isApproving ||
-              isMinting ||
-              mintingStep === 'approving' ||
-              mintingStep === 'minting' ||
-              isStatusLoading ||
-              !mintingWindowOpen ||
-              mintPrice === undefined ||
-              mintPrice === null ||
-              hasMinted
-            }
+            onClick={() => handleMint(1)}
+            disabled={!standardButtonEnabled}
             className={`w-full mt-6 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
-              isConnected &&
-              !whitelistBlocked &&
-              !isApproving && 
-              !isMinting && 
-              mintingStep === 'idle' &&
-              mintPrice !== undefined &&
-              mintPrice !== null &&
-              mintingWindowOpen &&
-              !isStatusLoading &&
-              !hasMinted
-                ? 'cursor-pointer hover:brightness-110'
-                : 'cursor-not-allowed opacity-50'
+              standardButtonEnabled ? 'cursor-pointer hover:brightness-110' : 'cursor-not-allowed opacity-50'
             }`}
             style={
-              isConnected &&
-              !whitelistBlocked &&
-              !isApproving && 
-              !isMinting && 
-              mintingStep === 'idle' &&
-              mintPrice !== undefined &&
-              mintPrice !== null &&
-              mintingWindowOpen &&
-              !isStatusLoading &&
-              !hasMinted
+              standardButtonEnabled
                 ? {
-                    backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
-                    boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+                    backgroundImage:
+                      'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                    boxShadow:
+                      '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
                   }
                 : {
                     background: '#4a4a4a',
@@ -348,14 +393,16 @@ const NFTMintDashboard: React.FC = () => {
               ? 'Minted'
               : !isConnected
               ? 'Connect Wallet'
-              : mintingStep === 'approving' || isApproving
+              : whitelistBlockedStandard
+              ? 'Whitelist mint is not active'
+              : isStandardProcessing && (mintingStep === 'approving' || isApproving)
               ? 'Approving...'
-              : mintingStep === 'minting' || isMinting
+              : isStandardProcessing && (mintingStep === 'minting' || isMinting)
               ? 'Minting...'
               : 'Mint Now'}
           </button>
-          {errorMessage && (
-            <p className="text-xs text-red-400 text-center mt-2">{errorMessage}</p>
+          {standardError && (
+            <p className="text-xs text-red-400 text-center mt-2">{standardError}</p>
           )}
         </div>
 
@@ -401,13 +448,13 @@ const NFTMintDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-white mb-1">Supply Remaining</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingRemainingSupply ? '...' : proRemainingSupply}
+                  {isLoadingProSupply || isLoadingProCollection ? '...' : (proRemainingSupply ?? 'N/A')}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-white mb-1">Max Supply</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingMaxSupply ? '...' : proMaxSupply}
+                  {isLoadingProSupply || isLoadingProCollection ? '...' : (proMaxSupply ?? 'N/A')}
                 </p>
               </div>
             </div>
@@ -423,48 +470,18 @@ const NFTMintDashboard: React.FC = () => {
 
           {/* Mint Button */}
           <button
-            onClick={handleMint}
-            disabled={
-              !isConnected ||
-              whitelistBlocked ||
-              isApproving ||
-              isMinting ||
-              mintingStep === 'approving' ||
-              mintingStep === 'minting' ||
-              isStatusLoading ||
-              !mintingWindowOpen ||
-              mintPrice === undefined ||
-              mintPrice === null ||
-              hasMinted
-            }
+            onClick={() => handleMint(2)}
+            disabled={!proButtonEnabled}
             className={`w-full mt-6 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
-              isConnected &&
-              !whitelistBlocked &&
-              !isApproving && 
-              !isMinting && 
-              mintingStep === 'idle' &&
-              mintPrice !== undefined &&
-              mintPrice !== null &&
-              mintingWindowOpen &&
-              !isStatusLoading &&
-              !hasMinted
-                ? 'cursor-pointer hover:brightness-110'
-                : 'cursor-not-allowed opacity-50'
+              proButtonEnabled ? 'cursor-pointer hover:brightness-110' : 'cursor-not-allowed opacity-50'
             }`}
             style={
-              isConnected &&
-              !whitelistBlocked &&
-              !isApproving && 
-              !isMinting && 
-              mintingStep === 'idle' &&
-              mintPrice !== undefined &&
-              mintPrice !== null &&
-              mintingWindowOpen &&
-              !isStatusLoading &&
-              !hasMinted
+              proButtonEnabled
                 ? {
-                    backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
-                    boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+                    backgroundImage:
+                      'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                    boxShadow:
+                      '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
                   }
                 : {
                     background: '#4a4a4a',
@@ -476,14 +493,16 @@ const NFTMintDashboard: React.FC = () => {
               ? 'Minted'
               : !isConnected
               ? 'Connect Wallet'
-              : mintingStep === 'approving' || isApproving
+              : whitelistBlockedPro
+              ? 'Whitelist mint is not active'
+              : isProProcessing && (mintingStep === 'approving' || isApproving)
               ? 'Approving...'
-              : mintingStep === 'minting' || isMinting
+              : isProProcessing && (mintingStep === 'minting' || isMinting)
               ? 'Minting...'
               : 'Mint Now'}
           </button>
-          {errorMessage && (
-            <p className="text-xs text-red-400 text-center mt-2">{errorMessage}</p>
+          {proError && (
+            <p className="text-xs text-red-400 text-center mt-2">{proError}</p>
           )}
         </div>
       </div>

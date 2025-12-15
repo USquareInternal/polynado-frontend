@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { useAccount, useReadContract } from 'wagmi';
-import { LockOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { LockOutlined, CheckCircleOutlined, CloseCircleOutlined, SettingOutlined } from '@ant-design/icons';
 import { useMintPrice, useMaxSupply, useRemainingSupply, useApproveUSDT, useMintNFT, usePublicMintActive, getNFTContractAddress, useWhitelistMintActive, useWhitelistStatus, useNFTBalance, useUSDTMeta } from '@/utils/nftContract';
 
 const NFTMintDashboard: React.FC = () => {
@@ -120,6 +120,17 @@ const NFTMintDashboard: React.FC = () => {
     'Private Community Pass',
   ];
 
+  // Calculate supply metrics for both tiers
+  const standardMaxSupply = maxSupply ? Number(maxSupply) : 100;
+  const standardRemainingSupply = remainingSupply ? Number(remainingSupply) : 75;
+  const standardMinted = standardMaxSupply - standardRemainingSupply;
+  const standardProgress = standardMaxSupply > 0 ? (standardMinted / standardMaxSupply) * 100 : 0;
+
+  const proMaxSupply = maxSupply ? Number(maxSupply) : 100;
+  const proRemainingSupply = remainingSupply ? Number(remainingSupply) : 75;
+  const proMinted = proMaxSupply - proRemainingSupply;
+  const proProgress = proMaxSupply > 0 ? (proMinted / proMaxSupply) * 100 : 0;
+
   // Handle approve success - proceed to mint
   useEffect(() => {
     if (isApproveSuccess && mintingStep === 'approving') {
@@ -226,229 +237,281 @@ const NFTMintDashboard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Left Section: Exclusive Lifetime Pro NFT */}
+    <div className=" mx-auto px-4 py-8">
+      {/* NFT Tiers Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-8">
+        {/* STANDARD TIER */}
         <div
-          className="relative rounded-2xl overflow-hidden border border-orange-500/30 shadow-[0_0_40px_rgba(255,126,53,0.25)] p-8"
+          className="relative rounded-xl overflow-hidden border border-orange-500/40 shadow-[0_0_30px_rgba(255,140,60,0.2)] p-6"
           style={{
             backgroundImage:
-              'radial-gradient(circle at 50% 50%, rgba(255,140,60,0.15) 0%, rgba(255,140,60,0) 60%),' +
+              'radial-gradient(circle at 12% 12%, rgba(255,140,60,0.15) 0%, rgba(255,140,60,0) 46%),' +
+              'radial-gradient(circle at 88% 85%, rgba(255,115,45,0.12) 0%, rgba(255,115,45,0) 48%),' +
               'linear-gradient(180deg, #0a0a0a 0%, #0e0a08 45%, #120804 100%)',
           }}
         >
-          <h2 className="text-2xl font-bold text-white mb-6">Exclusive Lifetime Pro NFT</h2>
-
-          {/* Shield Image Container */}
-          <div className="relative flex justify-center items-center my-8">
+          {/* 3D Cube Image Container */}
+          <div className="relative flex justify-center items-center mb-6">
             <div className="relative">
+              {/* Glowing base */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-8 bg-orange-500/30 rounded-full blur-xl"></div>
+              {/* Cube Image */}
               <img
-                src="/NFT.png"
-                alt="Pro NFT Shield"
-                className="w-64 h-64 object-contain drop-shadow-[0_0_30px_rgba(255,140,60,0.5)]"
-                style={{
-                  filter: hasMinted ? 'brightness(1.2) saturate(1.3)' : 'brightness(0.7) saturate(0.6)',
-                }}
+                src="/image 32.png"
+                alt="Standard Tier NFT"
+                className="w-48 h-48 object-contain relative z-10 drop-shadow-[0_0_30px_rgba(255,140,60,0.5)]"
               />
-              {hasMinted && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                  <div className="bg-green-500 px-6 py-2 rounded-lg transform -rotate-12 shadow-lg">
-                    <span className="text-white font-bold text-lg">MINTED</span>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Description Text */}
-          <div className="text-center space-y-3 mb-6">
-            <p className="text-lg font-semibold text-white">One-Time Mint. Forever Access.</p>
-            {isLoading ? (
-              <p className="text-gray-400">Loading contract data...</p>
-            ) : (
-              <>
-                <p className="text-gray-300">
-                  <span className="text-white font-medium">Price: </span>
-                  {formattedPrice}
+          {/* Title */}
+          <h3 className="text-xl font-bold text-white text-center mb-6">STANDARD TIER</h3>
+
+          {/* Supply Information */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-white mb-1">Supply Remaining</p>
+                <p className="text-2xl font-bold text-orange-400">
+                  {isLoadingRemainingSupply ? '...' : standardRemainingSupply}
                 </p>
-                <p className="text-gray-300">
-                  <span className="text-white font-medium">Max Supply: </span>
-                  {formattedMaxSupply}
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-white mb-1">Max Supply</p>
+                <p className="text-2xl font-bold text-orange-400">
+                  {isLoadingMaxSupply ? '...' : standardMaxSupply}
                 </p>
-                <p className="text-gray-300">
-                  <span className="text-white font-medium">Remaining Supply: </span>
-                  {formattedRemainingSupply}
-                </p>
-              </>
-            )}
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500"
+                style={{ width: `${standardProgress}%` }}
+              />
+            </div>
           </div>
 
           {/* Mint Button */}
-          <div className="space-y-2">
-            {hasMinted ? (
-              <button
-                className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 cursor-pointer relative overflow-hidden"
-                style={{
-                  backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-                  border: "none",
-                  boxShadow: '3px 4px 5px 0px rgba(16, 185, 129, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
-                }}
-              >
-                Minted
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={handleMint}
-                  disabled={
-                    !isConnected ||
-                    whitelistBlocked ||
-                    isApproving ||
-                    isMinting ||
-                    mintingStep === 'approving' ||
-                    mintingStep === 'minting' ||
-                    isStatusLoading ||
-                    !mintingWindowOpen ||
-                    mintPrice === undefined ||
-                    mintPrice === null
+          <button
+            onClick={handleMint}
+            disabled={
+              !isConnected ||
+              whitelistBlocked ||
+              isApproving ||
+              isMinting ||
+              mintingStep === 'approving' ||
+              mintingStep === 'minting' ||
+              isStatusLoading ||
+              !mintingWindowOpen ||
+              mintPrice === undefined ||
+              mintPrice === null ||
+              hasMinted
+            }
+            className={`w-full mt-6 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
+              isConnected &&
+              !whitelistBlocked &&
+              !isApproving && 
+              !isMinting && 
+              mintingStep === 'idle' &&
+              mintPrice !== undefined &&
+              mintPrice !== null &&
+              mintingWindowOpen &&
+              !isStatusLoading &&
+              !hasMinted
+                ? 'cursor-pointer hover:brightness-110'
+                : 'cursor-not-allowed opacity-50'
+            }`}
+            style={
+              isConnected &&
+              !whitelistBlocked &&
+              !isApproving && 
+              !isMinting && 
+              mintingStep === 'idle' &&
+              mintPrice !== undefined &&
+              mintPrice !== null &&
+              mintingWindowOpen &&
+              !isStatusLoading &&
+              !hasMinted
+                ? {
+                    backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                    boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
                   }
-                  className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
-                    isConnected &&
-                    !whitelistBlocked &&
-                    !isApproving && 
-                    !isMinting && 
-                    mintingStep === 'idle' &&
-                    mintPrice !== undefined &&
-                    mintPrice !== null &&
-                    mintingWindowOpen &&
-                    !isStatusLoading
-                      ? 'cursor-pointer hover:brightness-110'
-                      : 'cursor-not-allowed opacity-50'
-                  }`}
-                  style={
-                    isConnected &&
-                    !whitelistBlocked &&
-                    !isApproving && 
-                    !isMinting && 
-                    mintingStep === 'idle' &&
-                    mintPrice !== undefined &&
-                    mintPrice !== null &&
-                    mintingWindowOpen &&
-                    !isStatusLoading
-                      ? {
-                          backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
-                          border: "none",
-                          boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
-                        }
-                      : {
-                          background: '#4a4a4a',
-                          border: "none",
-                          color: '#9ca3af',
-                        }
+                : {
+                    background: '#4a4a4a',
+                    color: '#9ca3af',
                   }
-                >
-                  {!isConnected
-                    ? 'Please connect your wallet'
-                    : whitelistBlocked
-                    ? 'Whitelist mint is not active'
-                    : isStatusLoading
-                    ? 'Checking Status...'
-                    : mintPrice === undefined || mintPrice === null
-                    ? 'Mint Not Available'
-                    : !mintingWindowOpen
-                    ? 'Mint Not Active'
-                    : mintingStep === 'approving' || isApproving
-                    ? 'Approving USDT...'
-                    : mintingStep === 'minting' || isMinting
-                    ? 'Minting NFT...'
-                    : mintingStep === 'error'
-                    ? 'Retry Mint'
-                    : 'Mint Now'}
-                </button>
-                {errorMessage && (
-                  <p className="text-xs text-red-400 text-center mt-2">{errorMessage}</p>
-                )}
-                {mintingStep === 'success' && (
-                  <p className="text-xs text-green-400 text-center mt-2">Mint successful!</p>
-                )}
-              </>
-            )}
-          </div>
+            }
+          >
+            {hasMinted
+              ? 'Minted'
+              : !isConnected
+              ? 'Connect Wallet'
+              : mintingStep === 'approving' || isApproving
+              ? 'Approving...'
+              : mintingStep === 'minting' || isMinting
+              ? 'Minting...'
+              : 'Mint Now'}
+          </button>
+          {errorMessage && (
+            <p className="text-xs text-red-400 text-center mt-2">{errorMessage}</p>
+          )}
         </div>
 
-        {/* Right Section: Your Pro Benefits Status */}
+        {/* PRO TIER */}
         <div
-          className="relative rounded-2xl overflow-hidden border border-orange-500/30 shadow-[0_0_40px_rgba(255,126,53,0.25)] p-8"
+          className="relative rounded-xl overflow-hidden border border-orange-500/50 shadow-[0_0_30px_rgba(255,140,60,0.3)] p-6"
           style={{
             backgroundImage:
-              'radial-gradient(circle at 50% 50%, rgba(255,140,60,0.15) 0%, rgba(255,140,60,0) 60%),' +
+              'radial-gradient(circle at 12% 12%, rgba(255,140,60,0.25) 0%, rgba(255,140,60,0) 46%),' +
+              'radial-gradient(circle at 88% 85%, rgba(255,115,45,0.20) 0%, rgba(255,115,45,0) 48%),' +
               'linear-gradient(180deg, #0a0a0a 0%, #0e0a08 45%, #120804 100%)',
           }}
         >
-          <h2 className="text-2xl font-bold text-white mb-6">Your Pro Benefits Status</h2>
-
-          {/* Status Indicator */}
-          <div className="flex items-center gap-3 mb-8">
-            {hasMinted ? (
-              <>
-                <CheckCircleOutlined className="text-green-500 text-2xl" />
-                <div>
-                  <p className="text-white font-semibold">Status: Lifetime Pro Activated</p>
-                </div>
-              </>
-            ) : !isConnected ? (
-              <>
-                <CloseCircleOutlined className="text-2xl" style={{ color: '#FF494A' }} />
-                <div>
-                  <p className="text-[#FF494A] font-semibold">Status: Connect wallet to see status</p>
-                </div>
-              </>
-            ) : (
-              <>
-                {(!publicMintActive && !(whitelistMintActive && isWhitelisted)) ? (
-                  <>
-                    <CloseCircleOutlined className="text-2xl" style={{ color: '#FF494A' }} />
-                    <div>
-                      <p className="text-[#FF494A] font-semibold">Status: Minting is not active</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <CloseCircleOutlined className="text-2xl" style={{ color: '#FF494A' }} />
-                    <div>
-                      <p className="text-[#FF494A] font-semibold">Status: Inactive (Mint to Unlock)</p>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Benefits List */}
-          <div className="space-y-4">
-            {proBenefits.map((benefit, index) => (
-              <div key={index} className="flex items-center gap-3">
-            {hasMinted ? (
-                  <CheckCircleOutlined className="text-green-500 text-lg" />
-                ) : (
-                  <LockOutlined className="text-gray-500 text-lg" />
-                )}
-                <span className={`${hasMinted ? 'text-white font-medium' : 'text-gray-400'}`}>{benefit}</span>
+          {/* 3D Cube Image Container with enhanced effects */}
+          <div className="relative flex justify-center items-center mb-6">
+            <div className="relative">
+              {/* Enhanced glowing base */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 h-10 bg-orange-500/40 rounded-full blur-2xl animate-pulse"></div>
+              {/* Cube Image with enhanced glow */}
+              <img
+                src="/image 32.png"
+                alt="Pro Tier NFT"
+                className="w-48 h-48 object-contain relative z-10 drop-shadow-[0_0_40px_rgba(255,140,60,0.7)]"
+                style={{
+                  filter: 'brightness(1.1) saturate(1.2)',
+                }}
+              />
+              {/* Particle effects overlay */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-orange-400 rounded-full opacity-60 animate-ping"></div>
+                <div className="absolute top-3/4 right-1/4 w-1.5 h-1.5 bg-orange-300 rounded-full opacity-50 animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                <div className="absolute bottom-1/4 left-1/3 w-1 h-1 bg-orange-500 rounded-full opacity-70 animate-ping" style={{ animationDelay: '1s' }}></div>
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* Background Shield (Faded) */}
-          <div className="absolute bottom-0 right-0 opacity-10 pointer-events-none">
-            <img
-              src="/NFT.png"
-              alt="Background Shield"
-              className="w-65 h-65 object-contain rounded-xl"
-              // style={{
-              //   filter: hasMinted ? 'brightness(1.5) saturate(1.5)' : 'brightness(0.3) saturate(0.3)',
-              // }}
-            />
+          {/* Title */}
+          <h3 className="text-xl font-bold text-white text-center mb-6">PRO TIER</h3>
+
+          {/* Supply Information */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-white mb-1">Supply Remaining</p>
+                <p className="text-2xl font-bold text-orange-400">
+                  {isLoadingRemainingSupply ? '...' : proRemainingSupply}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-white mb-1">Max Supply</p>
+                <p className="text-2xl font-bold text-orange-400">
+                  {isLoadingMaxSupply ? '...' : proMaxSupply}
+                </p>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500"
+                style={{ width: `${proProgress}%` }}
+              />
+            </div>
           </div>
+
+          {/* Mint Button */}
+          <button
+            onClick={handleMint}
+            disabled={
+              !isConnected ||
+              whitelistBlocked ||
+              isApproving ||
+              isMinting ||
+              mintingStep === 'approving' ||
+              mintingStep === 'minting' ||
+              isStatusLoading ||
+              !mintingWindowOpen ||
+              mintPrice === undefined ||
+              mintPrice === null ||
+              hasMinted
+            }
+            className={`w-full mt-6 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
+              isConnected &&
+              !whitelistBlocked &&
+              !isApproving && 
+              !isMinting && 
+              mintingStep === 'idle' &&
+              mintPrice !== undefined &&
+              mintPrice !== null &&
+              mintingWindowOpen &&
+              !isStatusLoading &&
+              !hasMinted
+                ? 'cursor-pointer hover:brightness-110'
+                : 'cursor-not-allowed opacity-50'
+            }`}
+            style={
+              isConnected &&
+              !whitelistBlocked &&
+              !isApproving && 
+              !isMinting && 
+              mintingStep === 'idle' &&
+              mintPrice !== undefined &&
+              mintPrice !== null &&
+              mintingWindowOpen &&
+              !isStatusLoading &&
+              !hasMinted
+                ? {
+                    backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                    boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+                  }
+                : {
+                    background: '#4a4a4a',
+                    color: '#9ca3af',
+                  }
+            }
+          >
+            {hasMinted
+              ? 'Minted'
+              : !isConnected
+              ? 'Connect Wallet'
+              : mintingStep === 'approving' || isApproving
+              ? 'Approving...'
+              : mintingStep === 'minting' || isMinting
+              ? 'Minting...'
+              : 'Mint Now'}
+          </button>
+          {errorMessage && (
+            <p className="text-xs text-red-400 text-center mt-2">{errorMessage}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Common Features Section */}
+      <div
+        className="relative rounded-xl overflow-hidden border border-orange-500/40 shadow-[0_0_30px_rgba(255,140,60,0.2)] p-6"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 12% 12%, rgba(255,140,60,0.15) 0%, rgba(255,140,60,0) 46%),' +
+            'radial-gradient(circle at 88% 85%, rgba(255,115,45,0.12) 0%, rgba(255,115,45,0) 48%),' +
+            'linear-gradient(180deg, #0a0a0a 0%, #0e0a08 45%, #120804 100%)',
+        }}
+      >
+        {/* Title with icon */}
+        <div className="flex items-center gap-2 mb-6">
+          <SettingOutlined className="text-orange-400 text-xl" />
+          <h3 className="text-xl font-bold text-white">Common features</h3>
+        </div>
+
+        {/* Features List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {proBenefits.map((benefit, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <div className="w-1.5 h-1.5 bg-orange-400 rounded-full"></div>
+              <span className="text-orange-400">{benefit}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

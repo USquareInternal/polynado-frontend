@@ -1,6 +1,6 @@
 // src/utils/nftContract.ts
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import NFTmintABI from '@/abi/NFTmintABI.json.json';
+import NFTmintABI from '@/abi/NFTmintABI.json';
 
 // ERC20 ABI for USDT approve function
 const ERC20_ABI = [
@@ -52,31 +52,20 @@ export const useUSDTMeta = () => {
   const usdtAddressResult = useReadContract({
     address: contractAddress,
     abi: NFTmintABI,
-    functionName: 'USDT',
-    query: {
-      enabled: !!contractAddress,
-    },
+    functionName: 'usdtToken',
+    query: { enabled: !!contractAddress },
   });
 
-  const usdtDecimalsResult = useReadContract({
-    address: contractAddress,
-    abi: NFTmintABI,
-    functionName: 'USDT_DECIMALS',
-    query: {
-      enabled: !!contractAddress,
-    },
-  });
+  // Decimals are not exposed; fallback to env override or 6
+  const fallbackDecimals = Number(process.env.NEXT_PUBLIC_USDT_DECIMALS ?? 6);
 
   return {
     usdtAddress: usdtAddressResult.data as `0x${string}` | undefined,
-    usdtDecimals: typeof usdtDecimalsResult.data === 'bigint'
-      ? Number(usdtDecimalsResult.data)
-      : undefined,
-    isLoading: usdtAddressResult.isLoading || usdtDecimalsResult.isLoading,
-    error: usdtAddressResult.error || usdtDecimalsResult.error,
+    usdtDecimals: fallbackDecimals,
+    isLoading: usdtAddressResult.isLoading,
+    error: usdtAddressResult.error,
     refetch: () => {
       usdtAddressResult.refetch?.();
-      usdtDecimalsResult.refetch?.();
     },
   };
 };
@@ -84,44 +73,22 @@ export const useUSDTMeta = () => {
 /**
  * Hook to read ERC721 balance for an address
  */
-export const useNFTBalance = (owner?: `0x${string}`) => {
-  const contractAddress = getContractAddress();
-
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi: NFTmintABI,
-    functionName: 'balanceOf',
-    args: owner ? [owner] : undefined,
-    query: {
-      enabled: !!contractAddress && !!owner,
-    },
-  });
-
-  return {
-    balance: data as bigint | undefined,
-    isLoading,
-    error,
-    refetch,
-  };
-};
+// Factory ABI does not expose holder balances; return undefined to avoid bad calls.
+export const useNFTBalance = (_owner?: `0x${string}`) => ({
+  balance: undefined as bigint | undefined,
+  isLoading: false,
+  error: undefined as Error | undefined,
+  refetch: () => undefined,
+});
 
 /**
  * Hook to check if whitelist minting is active
  */
-export const useWhitelistMintActive = () => {
-  const contractAddress = getContractAddress();
-
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi: NFTmintABI,
-    functionName: 'whitelistMintActive',
-    query: {
-      enabled: !!contractAddress,
-    },
-  });
-
+export const useWhitelistMintActive = (collectionId: number | bigint = 1) => {
+  const { collection, isLoading, error, refetch } = useCollectionInfo(collectionId);
+  // No separate whitelist flag; use collection active flag
   return {
-    whitelistMintActive: data as boolean | undefined,
+    whitelistMintActive: collection?.isActive,
     isLoading,
     error,
     refetch,
@@ -131,16 +98,16 @@ export const useWhitelistMintActive = () => {
 /**
  * Hook to check if an address is whitelisted
  */
-export const useWhitelistStatus = (owner?: `0x${string}`) => {
+export const useWhitelistStatus = (userId?: string) => {
   const contractAddress = getContractAddress();
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
     abi: NFTmintABI,
     functionName: 'isWhitelisted',
-    args: owner ? [owner] : undefined,
+    args: userId ? [userId] : undefined,
     query: {
-      enabled: !!contractAddress && !!owner,
+      enabled: !!contractAddress && !!userId,
     },
   });
 
@@ -152,92 +119,97 @@ export const useWhitelistStatus = (owner?: `0x${string}`) => {
   };
 };
 
-/**
- * Custom hook to read mint price from the NFT contract
- */
-export const useMintPrice = () => {
+// ------------------------------------------------------------
+// Collection metadata & supply
+// ------------------------------------------------------------
+export type CollectionInfo = {
+  collectionAddress: `0x${string}`;
+  name: string;
+  symbol: string;
+  maxSupply: bigint;
+  mintPrice: bigint;
+  isActive: boolean;
+};
+
+export const useCollectionInfo = (collectionId: number | bigint | undefined) => {
   const contractAddress = getContractAddress();
-  
+
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
     abi: NFTmintABI,
-    functionName: 'mintPrice',
+    functionName: 'getCollectionInfo',
+    args: collectionId !== undefined ? [BigInt(collectionId)] : undefined,
     query: {
-      enabled: !!contractAddress, // Only query if contract address is set
+      enabled: !!contractAddress && collectionId !== undefined,
     },
   });
 
+  const tuple = data as
+    | {
+        0: `0x${string}`;
+        1: string;
+        2: string;
+        3: bigint;
+        4: bigint;
+        5: boolean;
+        collectionAddress?: `0x${string}`;
+        name?: string;
+        symbol?: string;
+        maxSupply?: bigint;
+        mintPrice?: bigint;
+        isActive?: boolean;
+      }
+    | undefined;
+
+  const collection: CollectionInfo | undefined = tuple
+    ? {
+        collectionAddress: (tuple.collectionAddress ?? tuple[0]) as `0x${string}`,
+        name: tuple.name ?? tuple[1],
+        symbol: tuple.symbol ?? tuple[2],
+        maxSupply: tuple.maxSupply ?? tuple[3],
+        mintPrice: tuple.mintPrice ?? tuple[4],
+        isActive: tuple.isActive ?? tuple[5],
+      }
+    : undefined;
+
+  return { collection, isLoading, error, refetch };
+};
+
+export const useCollectionSupply = (collectionId: number | bigint | undefined) => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'getCollectionSupply',
+    args: collectionId !== undefined ? [BigInt(collectionId)] : undefined,
+    query: {
+      enabled: !!contractAddress && collectionId !== undefined,
+    },
+  });
+
+  const tuple = data as
+    | {
+        0: bigint;
+        1: bigint;
+        current?: bigint;
+        max?: bigint;
+      }
+    | undefined;
+
   return {
-    mintPrice: data as bigint | undefined,
+    current: tuple ? tuple.current ?? tuple[0] : undefined,
+    max: tuple ? tuple.max ?? tuple[1] : undefined,
     isLoading,
     error,
     refetch,
   };
 };
 
-/**
- * Custom hook to read MAX_SUPPLY from the NFT contract
- */
-export const useMaxSupply = () => {
-  const contractAddress = getContractAddress();
-  
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi: NFTmintABI,
-    functionName: 'MAX_SUPPLY',
-    query: {
-      enabled: !!contractAddress, // Only query if contract address is set
-    },
-  });
-
+export const usePublicMintActive = (collectionId: number | bigint = 1) => {
+  const { collection, isLoading, error, refetch } = useCollectionInfo(collectionId);
   return {
-    maxSupply: data as bigint | undefined,
-    isLoading,
-    error,
-    refetch,
-  };
-};
-
-/**
- * Custom hook to read remainingSupply from the NFT contract
- */
-export const useRemainingSupply = () => {
-  const contractAddress = getContractAddress();
-  
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi: NFTmintABI,
-    functionName: 'remainingSupply',
-    query: {
-      enabled: !!contractAddress, // Only query if contract address is set
-    },
-  });
-
-  return {
-    remainingSupply: data as bigint | undefined,
-    isLoading,
-    error,
-    refetch,
-  };
-};
-
-/**
- * Custom hook to check if public mint is active
- */
-export const usePublicMintActive = () => {
-  const contractAddress = getContractAddress();
-  
-  const { data, isLoading, error, refetch } = useReadContract({
-    address: contractAddress,
-    abi: NFTmintABI,
-    functionName: 'publicMintActive',
-    query: {
-      enabled: !!contractAddress,
-    },
-  });
-
-  return {
-    publicMintActive: data as boolean | undefined,
+    publicMintActive: collection?.isActive,
     isLoading,
     error,
     refetch,
@@ -295,34 +267,66 @@ export const useApproveUSDT = (
 };
 
 /**
- * Hook to mint NFT
+ * Hook to mint via publicMint(userId, collectionId)
  */
-export const useMintNFT = () => {
+export const usePublicMint = () => {
   const contractAddress = getContractAddress();
-  
+
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
 
-  const mint = async (quantity: number = 1, referralCode: string = 'ADMIN') => {
+  const publicMint = async (userId: string, collectionId: number) => {
     if (!contractAddress) {
       throw new Error('NFT contract address not set');
     }
 
-    // Empty bytes32 array for merkle proof (not using whitelist)
-    const merkleProof: `0x${string}`[] = [];
-
     writeContract({
       address: contractAddress,
       abi: NFTmintABI,
-      functionName: 'mint',
-      args: [BigInt(quantity), merkleProof, referralCode],
+      functionName: 'publicMint',
+      args: [userId, BigInt(collectionId)],
     });
   };
 
   return {
-    mint,
+    publicMint,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+};
+
+/**
+ * Hook to mint via whitelistMint(userId, collectionId)
+ */
+export const useWhitelistMint = () => {
+  const contractAddress = getContractAddress();
+
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const whitelistMint = async (userId: string, collectionId: number) => {
+    if (!contractAddress) {
+      throw new Error('NFT contract address not set');
+    }
+
+    writeContract({
+      address: contractAddress,
+      abi: NFTmintABI,
+      functionName: 'whitelistMint',
+      args: [userId, BigInt(collectionId)],
+    });
+  };
+
+  return {
+    whitelistMint,
     hash,
     isPending,
     isConfirming,

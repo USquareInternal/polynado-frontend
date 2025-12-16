@@ -171,7 +171,7 @@ const ConnectWalletPage: React.FC = () => {
                 }
               }}
             >
-              {isPending || isConfirming ? 'Processing...' : hasJoined ? 'Joined!' : 'CONTINUE'}
+              {isPending || isConfirming ? 'Joining POLYNADO...' : hasJoined ? 'Joined!' : 'CONTINUE'}
             </button>
             
             {hash && (

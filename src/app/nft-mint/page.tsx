@@ -120,6 +120,37 @@ const NFTMintDashboard: React.FC = () => {
   const formattedStandardPrice = formatPrice(standardMintPrice);
   const formattedProPrice = formatPrice(proMintPrice);
 
+  // Format large bigint numbers - convert to readable format
+  const formatLargeNumber = (num?: bigint | number): string => {
+    if (num === undefined || num === null) return 'N/A';
+    
+    // Convert bigint to number for display
+    let numValue: number;
+    if (typeof num === 'bigint') {
+      // For very large bigints, convert safely
+      numValue = Number(num);
+    } else {
+      numValue = num;
+    }
+    
+    // If the number is too large or invalid, return N/A
+    if (!isFinite(numValue) || isNaN(numValue)) {
+      return 'N/A';
+    }
+    
+    // For very large numbers (like 1e+23), divide by 1e+20 to get readable numbers in thousands
+    // This converts 100000000000000000000000 to 1000
+    if (numValue >= 1e20) {
+      numValue = numValue / 1e20;
+    }
+    
+    // Format as integer with commas
+    return Math.floor(numValue).toLocaleString('en-US', {
+      maximumFractionDigits: 0,
+      useGrouping: true
+    });
+  };
+
   const proBenefits = [
     'Unlimited Advanced Analytics',
     'Priority Support Channel',
@@ -127,13 +158,22 @@ const NFTMintDashboard: React.FC = () => {
     'Private Community Pass',
   ];
 
-  const standardMaxSupply = standardMax ? Number(standardMax) : undefined;
-  const standardRemainingSupply = standardMax !== undefined && standardCurrent !== undefined ? Number(standardMax - standardCurrent) : undefined;
-  const standardProgress = standardMax && standardCurrent !== undefined && standardMax > 0 ? (Number(standardCurrent) / Number(standardMax)) * 100 : 0;
+  // Convert to numbers for display (handle large bigints safely)
+  const standardMaxSupply = standardMax !== undefined ? Number(standardMax) : undefined;
+  const standardRemainingSupply = standardMax !== undefined && standardCurrent !== undefined 
+    ? Number(standardMax - standardCurrent) 
+    : undefined;
+  const standardProgress = standardMax && standardCurrent !== undefined && Number(standardMax) > 0
+    ? (Number(standardCurrent) / Number(standardMax)) * 100 
+    : 0;
 
-  const proMaxSupply = proMax ? Number(proMax) : undefined;
-  const proRemainingSupply = proMax !== undefined && proCurrent !== undefined ? Number(proMax - proCurrent) : undefined;
-  const proProgress = proMax && proCurrent !== undefined && proMax > 0 ? (Number(proCurrent) / Number(proMax)) * 100 : 0;
+  const proMaxSupply = proMax !== undefined ? Number(proMax) : undefined;
+  const proRemainingSupply = proMax !== undefined && proCurrent !== undefined 
+    ? Number(proMax - proCurrent) 
+    : undefined;
+  const proProgress = proMax && proCurrent !== undefined && Number(proMax) > 0
+    ? (Number(proCurrent) / Number(proMax)) * 100 
+    : 0;
 
   // Track pending mint request details (per collection)
   const [pendingCollectionId, setPendingCollectionId] = useState<number | null>(null);
@@ -317,30 +357,31 @@ const NFTMintDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-8">
         {/* STANDARD TIER */}
         <div
-          className="relative rounded-xl overflow-hidden border border-orange-500/40 shadow-[0_0_30px_rgba(255,140,60,0.2)] p-6"
+          className="relative rounded-xl overflow-hidden p-6"
           style={{
-            backgroundImage:
-              'radial-gradient(circle at 12% 12%, rgba(255,140,60,0.15) 0%, rgba(255,140,60,0) 46%),' +
-              'radial-gradient(circle at 88% 85%, rgba(255,115,45,0.12) 0%, rgba(255,115,45,0) 48%),' +
-              'linear-gradient(180deg, #0a0a0a 0%, #0e0a08 45%, #120804 100%)',
+            borderColor: '#6C6C6C',
+            borderWidth: '1px',
+            borderStyle: 'solid',
           }}
         >
           {/* 3D Cube Image Container */}
           <div className="relative flex justify-center items-center mb-6">
             <div className="relative">
-              {/* Glowing base */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-8 bg-orange-500/30 rounded-full blur-xl"></div>
               {/* Cube Image */}
               <img
                 src="/image 32.png"
                 alt="Standard Tier NFT"
-                className="w-48 h-48 object-contain relative z-10 drop-shadow-[0_0_30px_rgba(255,140,60,0.5)]"
+                className=" object-contain relative z-10"
+                style={{ width: '300px', height: '300px',marginTop:75,marginBottom:40 }}
               />
             </div>
           </div>
 
-          {/* Title */}
-          <h3 className="text-xl font-bold text-white text-center mb-6">STANDARD TIER</h3>
+          {/* Title with Price */}
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-white">STANDARD TIER</h3>
+            <span className="text-xl font-bold text-orange-400">150 USDT</span>
+          </div>
 
           {/* Supply Information */}
           <div className="space-y-4">
@@ -348,13 +389,13 @@ const NFTMintDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-white mb-1">Supply Remaining</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : (standardRemainingSupply ?? 'N/A')}
+                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : formatLargeNumber(standardRemainingSupply)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-white mb-1">Max Supply</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : (standardMaxSupply ?? 'N/A')}
+                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : formatLargeNumber(standardMaxSupply)}
                 </p>
               </div>
             </div>
@@ -408,39 +449,35 @@ const NFTMintDashboard: React.FC = () => {
 
         {/* PRO TIER */}
         <div
-          className="relative rounded-xl overflow-hidden border border-orange-500/50 shadow-[0_0_30px_rgba(255,140,60,0.3)] p-6"
+          className="relative rounded-xl overflow-hidden p-6"
           style={{
-            backgroundImage:
-              'radial-gradient(circle at 12% 12%, rgba(255,140,60,0.25) 0%, rgba(255,140,60,0) 46%),' +
-              'radial-gradient(circle at 88% 85%, rgba(255,115,45,0.20) 0%, rgba(255,115,45,0) 48%),' +
-              'linear-gradient(180deg, #0a0a0a 0%, #0e0a08 45%, #120804 100%)',
+            borderColor: '#6C6C6C',
+            borderWidth: '1px',
+            borderStyle: 'solid',
           }}
         >
-          {/* 3D Cube Image Container with enhanced effects */}
+          {/* 3D Cube Video Container */}
           <div className="relative flex justify-center items-center mb-6">
             <div className="relative">
-              {/* Enhanced glowing base */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 h-10 bg-orange-500/40 rounded-full blur-2xl animate-pulse"></div>
-              {/* Cube Image with enhanced glow */}
-              <img
-                src="/image 32.png"
-                alt="Pro Tier NFT"
-                className="w-48 h-48 object-contain relative z-10 drop-shadow-[0_0_40px_rgba(255,140,60,0.7)]"
-                style={{
-                  filter: 'brightness(1.1) saturate(1.2)',
-                }}
+              {/* Cube Video */}
+              <video
+                src="/Revolving_Cube_With_Flowing_Particles.mp4"
+                className="object-contain relative z-10"
+                style={{ width: '400px', height: '400px' }}
+                autoPlay
+                loop
+                muted
+                playsInline
+                controls={false}
               />
-              {/* Particle effects overlay */}
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-orange-400 rounded-full opacity-60 animate-ping"></div>
-                <div className="absolute top-3/4 right-1/4 w-1.5 h-1.5 bg-orange-300 rounded-full opacity-50 animate-ping" style={{ animationDelay: '0.5s' }}></div>
-                <div className="absolute bottom-1/4 left-1/3 w-1 h-1 bg-orange-500 rounded-full opacity-70 animate-ping" style={{ animationDelay: '1s' }}></div>
-              </div>
             </div>
           </div>
 
-          {/* Title */}
-          <h3 className="text-xl font-bold text-white text-center mb-6">PRO TIER</h3>
+          {/* Title with Price */}
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-white">PRO TIER</h3>
+            <span className="text-xl font-bold text-orange-400">250 USDT</span>
+          </div>
 
           {/* Supply Information */}
           <div className="space-y-4">
@@ -448,13 +485,13 @@ const NFTMintDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-white mb-1">Supply Remaining</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingProSupply || isLoadingProCollection ? '...' : (proRemainingSupply ?? 'N/A')}
+                  {isLoadingProSupply || isLoadingProCollection ? '...' : formatLargeNumber(proRemainingSupply)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-white mb-1">Max Supply</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingProSupply || isLoadingProCollection ? '...' : (proMaxSupply ?? 'N/A')}
+                  {isLoadingProSupply || isLoadingProCollection ? '...' : formatLargeNumber(proMaxSupply)}
                 </p>
               </div>
             </div>
@@ -509,12 +546,11 @@ const NFTMintDashboard: React.FC = () => {
 
       {/* Common Features Section */}
       <div
-        className="relative rounded-xl overflow-hidden border border-orange-500/40 shadow-[0_0_30px_rgba(255,140,60,0.2)] p-6"
+        className="relative rounded-xl overflow-hidden p-6"
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 12% 12%, rgba(255,140,60,0.15) 0%, rgba(255,140,60,0) 46%),' +
-            'radial-gradient(circle at 88% 85%, rgba(255,115,45,0.12) 0%, rgba(255,115,45,0) 48%),' +
-            'linear-gradient(180deg, #0a0a0a 0%, #0e0a08 45%, #120804 100%)',
+          borderColor: '#6C6C6C',
+          borderWidth: '1px',
+          borderStyle: 'solid',
         }}
       >
         {/* Title with icon */}

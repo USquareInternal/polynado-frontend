@@ -22,13 +22,20 @@ const WalletConnect: React.FC<WalletConnectProps> = ({ onConnect, onDisconnect }
     const { isConnected } = useAccount();
 
     // Ref to track the previous connection state to detect changes
-    const wasConnected = useRef(isConnected);
+    const wasConnected = useRef<boolean | undefined>(undefined);
+    // Ref to track if component has mounted to prevent showing alert on initial mount
+    const isMounted = useRef(false);
 
     useEffect(() => {
-        // Check if the connection status has changed since the last render
-        // and ensure this is not the initial mount (where isConnected == wasConnected.current)
-        if (isConnected !== wasConnected.current) {
+        // Mark component as mounted after first render
+        if (!isMounted.current) {
+            isMounted.current = true;
+            wasConnected.current = isConnected;
+            return;
+        }
 
+        // Only show alert if connection state actually changed and component is mounted
+        if (isConnected !== wasConnected.current && wasConnected.current !== undefined) {
             // Call the external SweetAlert function
             showSuccessAlert(
                 `Your wallet has been ${isConnected ? "connected" : "disconnected"} successfully.`,
@@ -40,11 +47,11 @@ const WalletConnect: React.FC<WalletConnectProps> = ({ onConnect, onDisconnect }
             } else {
                 onDisconnect?.();
             }
-
-            // Update the ref to the current state for the next render cycle
-            wasConnected.current = isConnected;
         }
-    }, [isConnected]); // Reruns whenever the connection status changes
+
+        // Update the ref to the current state for the next render cycle
+        wasConnected.current = isConnected;
+    }, [isConnected, onConnect, onDisconnect]); // Reruns whenever the connection status changes
 
     return (
         <div className="custom-connect-button-wrapper">

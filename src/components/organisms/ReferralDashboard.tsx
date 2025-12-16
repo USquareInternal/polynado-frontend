@@ -1,21 +1,52 @@
 // src/components/organisms/ReferralDashboard.tsx
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ReferralStatCard } from '@/components/molecules/ReferralStatCard';
 import { ReferralLinkInput } from '@/components/molecules/ReferralLinkInput';
 import { QRCodeSection } from '@/components/molecules/QRCodeSection';
 import { RewardCard } from '@/components/molecules/RewardCard';
 import { Heading } from '@/components/atoms/Heading';
+import { getToken } from '@/services/authService';
 
 // Define the props for the component
 interface ReferralDashboardProps {
   isHomePage?: boolean; // Optional prop to indicate if it's on the home page
 }
 
+// API Response Types
+interface ReferredUser {
+  _id: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+  userId?: string;
+  reffralId?: string;
+  referralRewards: number | string;
+  referredBy?: string | null;
+  ReferredBy?: string | null;
+}
+
+interface ReferredUsersResponse {
+  message: string;
+  success: boolean;
+  data: ReferredUser[];
+}
+
+// Table Event Type
+interface ReferralEvent {
+  id: string;
+  date: string;
+  type: string;
+  reward: string;
+  status: string;
+}
+
 // Update the component signature to accept props
 export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage = false }) => {
   const referralLink = 'https://polynado.xyz/?ref=dave123';
+  const [referralEvents, setReferralEvents] = useState<ReferralEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const stats = [
     { value: 12, label: 'Total Referred Users', iconType: 'users' as const },
@@ -42,17 +73,101 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
     },
   ];
 
-  const referralEvents = [
-    { id: '0x742d...A8B3', date: 'Dec 7, 2025 14:23', type: 'NFT Mint', reward: '150 USDT', status: 'Paid' },
-    { id: '0x943b...C2D4', date: 'Dec 7, 2025 11:45', type: 'Subscription', reward: '250 USDT', status: 'Confirmed' },
-    { id: '0x488f...E1A9', date: 'Dec 6, 2025 19:12', type: 'Subscription', reward: '250 USDT', status: 'Confirmed' },
-    { id: '0x1d2c...F7B6', date: 'Dec 6, 2025 16:34', type: 'NFT Mint', reward: '150 USDT', status: 'Paid' },
-    { id: '0x1d2c...45A5', date: 'Dec 5, 2025 22:18', type: 'Subscription', reward: '250 USDT', status: 'Pending' },
-    { id: '0x1d2c...90Mk', date: 'Dec 5, 2025 14:58', type: 'NFT Mint', reward: '150 USDT', status: 'Pending' },
-    { id: '0x1d2c...U134', date: 'Dec 4, 2025 20:41', type: 'NFT Mint', reward: '250 USDT', status: 'Paid' },
-    { id: '0x1d2c...90SD', date: 'Dec 4, 2025 14:56', type: 'NFT Mint', reward: '150 USDT', status: 'Pending' },
-    { id: '0x1d2c...F464', date: 'Dec 4, 2025 11:59', type: 'Subscription', reward: '150 USDT', status: 'Confirmed' },
-  ];
+  // Convert wei to USDT (assuming 18 decimals)
+  const formatRewardAmount = (weiAmount: number | string): string => {
+    const amount = typeof weiAmount === 'string' ? BigInt(weiAmount) : BigInt(weiAmount);
+    const decimals = 18;
+    const divisor = BigInt(10 ** decimals);
+    const whole = amount / divisor;
+    const remainder = amount % divisor;
+    
+    if (remainder === BigInt(0)) {
+      return `${whole.toString()} USDT`;
+    } else {
+      const remainderStr = remainder.toString().padStart(decimals, '0');
+      const trimmedRemainder = remainderStr.replace(/0+$/, '');
+      const decimalValue = parseFloat(`0.${trimmedRemainder}`);
+      const totalValue = Number(whole) + decimalValue;
+      return `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
+    }
+  };
+
+  // Format date from ISO string
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${month} ${day}, ${year} ${hours}:${minutes}`;
+  };
+
+  // Determine reward status based on referralRewards
+  const getRewardStatus = (referralRewards: number | string): string => {
+    const amount = typeof referralRewards === 'string' ? BigInt(referralRewards) : BigInt(referralRewards);
+    // If rewards > 0, consider it as "Paid", otherwise "Pending"
+    return amount > BigInt(0) ? 'Paid' : 'Pending';
+  };
+
+  // Fetch referred users from API
+  useEffect(() => {
+    const fetchReferredUsers = async () => {
+      try {
+        setIsLoading(true);
+        const token = getToken();
+        
+        if (!token) {
+          console.error('No authentication token found');
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await fetch('https://polynado-backend.onrender.com/api/referral/referred-users', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch referred users: ${response.statusText}`);
+        }
+
+        const data: ReferredUsersResponse = await response.json();
+
+        if (data.success && data.data) {
+          // Sort by date (newest first) - sort by createdAt before mapping
+          const sortedData = [...data.data].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          
+          // Map sorted data to events
+          const events: ReferralEvent[] = sortedData.map((user) => ({
+            id: user.userId || user.reffralId || 'N/A',
+            date: formatDate(user.createdAt),
+            type: 'User Registration', // API doesn't provide event type, defaulting to User Registration
+            reward: formatRewardAmount(user.referralRewards),
+            status: getRewardStatus(user.referralRewards),
+          }));
+          
+          setReferralEvents(events);
+        }
+      } catch (error) {
+        console.error('Error fetching referred users:', error);
+        // Keep empty array on error
+        setReferralEvents([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!isHomePage) {
+      fetchReferredUsers();
+    }
+  }, [isHomePage]);
 
   return (
     <section className="mt-12">
@@ -114,37 +229,51 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1f2226]">
-                  {referralEvents.map((event, idx) => (
-                    <tr
-                      key={idx}
-                      className="transition-colors hover:bg-[#15181c]"
-                      style={{
-                        backgroundColor: idx % 2 === 0 ? '#000000' : '#1E2022',
-                      }}
-                    >
-                      <td className="px-4 py-3">{event.id}</td>
-                      <td className="px-4 py-3 text-gray-400">{event.date}</td>
-                      <td className="px-4 py-3">
-                        <span className={event.type === 'NFT Mint' ? 'text-[#0fd8ff]' : 'text-[#d27cf4]'}>
-                          {event.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-200">{event.reward}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={
-                            event.status === 'Paid'
-                              ? 'text-[#6edb8b]'
-                              : event.status === 'Pending'
-                              ? 'text-[#f7aa50]'
-                              : 'text-[#ffcf68]'
-                          }
-                        >
-                          {event.status}
-                        </span>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                        Loading referred users...
                       </td>
                     </tr>
-                  ))}
+                  ) : referralEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                        No referred users found.
+                      </td>
+                    </tr>
+                  ) : (
+                    referralEvents.map((event, idx) => (
+                      <tr
+                        key={idx}
+                        className="transition-colors hover:bg-[#15181c]"
+                        style={{
+                          backgroundColor: idx % 2 === 0 ? '#000000' : '#1E2022',
+                        }}
+                      >
+                        <td className="px-4 py-3">{event.id}</td>
+                        <td className="px-4 py-3 text-gray-400">{event.date}</td>
+                        <td className="px-4 py-3">
+                          <span className={event.type === 'NFT Mint' ? 'text-[#0fd8ff]' : event.type === 'Subscription' ? 'text-[#d27cf4]' : 'text-[#f7aa50]'}>
+                            {event.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-200">{event.reward}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={
+                              event.status === 'Paid'
+                                ? 'text-[#6edb8b]'
+                                : event.status === 'Pending'
+                                ? 'text-[#f7aa50]'
+                                : 'text-[#ffcf68]'
+                            }
+                          >
+                            {event.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

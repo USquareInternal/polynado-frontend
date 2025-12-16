@@ -106,49 +106,57 @@ const NFTMintDashboard: React.FC = () => {
       proCollection,
       standardSupply: { current: standardCurrent, max: standardMax },
       proSupply: { current: proCurrent, max: proMax },
+      standardMintPrice: standardMintPrice?.toString(),
+      proMintPrice: proMintPrice?.toString(),
+      usdtDecimals,
     });
-  }, [standardCollection, proCollection, standardCurrent, standardMax, proCurrent, proMax]);
+  }, [standardCollection, proCollection, standardCurrent, standardMax, proCurrent, proMax, standardMintPrice, proMintPrice, usdtDecimals]);
 
 
   const formatPrice = (raw?: bigint) => {
     if (raw === undefined || raw === null) return 'N/A';
-    const decimals = usdtDecimals ?? 6;
-    const divisor = 10 ** decimals;
-    const val = Number(raw) / divisor;
-    return `${val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
+    const decimals = usdtDecimals ?? 18;
+    
+    // Use bigint division for precision
+    const divisor = BigInt(10 ** decimals);
+    const whole = raw / divisor;
+    const remainder = raw % divisor;
+    
+    // Convert whole part to string
+    const wholeStr = whole.toString();
+    
+    // Handle remainder
+    if (remainder === BigInt(0)) {
+      // No decimal part
+      const numValue = Number(whole);
+      return `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT`;
+    } else {
+      // Convert remainder to decimal string
+      const remainderStr = remainder.toString().padStart(decimals, '0');
+      const trimmedRemainder = remainderStr.replace(/0+$/, '');
+      
+      // Combine whole and decimal parts
+      const decimalValue = parseFloat(`0.${trimmedRemainder}`);
+      const totalValue = Number(whole) + decimalValue;
+      
+      return `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
+    }
   };
   const formattedStandardPrice = formatPrice(standardMintPrice);
   const formattedProPrice = formatPrice(proMintPrice);
 
-  // Format large bigint numbers - convert to readable format
-  const formatLargeNumber = (num?: bigint | number): string => {
+  // Format supply numbers (bigint) - convert to readable format without losing precision
+  const formatSupplyNumber = (num?: bigint): string => {
     if (num === undefined || num === null) return 'N/A';
     
-    // Convert bigint to number for display
-    let numValue: number;
-    if (typeof num === 'bigint') {
-      // For very large bigints, convert safely
-      numValue = Number(num);
-    } else {
-      numValue = num;
-    }
+    // Convert bigint to string for precision
+    const numStr = num.toString();
     
-    // If the number is too large or invalid, return N/A
-    if (!isFinite(numValue) || isNaN(numValue)) {
-      return 'N/A';
-    }
+    // Format with commas for readability
+    // Add commas every 3 digits from right to left
+    const formatted = numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     
-    // For very large numbers (like 1e+23), divide by 1e+20 to get readable numbers in thousands
-    // This converts 100000000000000000000000 to 1000
-    if (numValue >= 1e20) {
-      numValue = numValue / 1e20;
-    }
-    
-    // Format as integer with commas
-    return Math.floor(numValue).toLocaleString('en-US', {
-      maximumFractionDigits: 0,
-      useGrouping: true
-    });
+    return formatted;
   };
 
   const proBenefits = [
@@ -158,21 +166,20 @@ const NFTMintDashboard: React.FC = () => {
     'Private Community Pass',
   ];
 
-  // Convert to numbers for display (handle large bigints safely)
-  const standardMaxSupply = standardMax !== undefined ? Number(standardMax) : undefined;
+  // Calculate supply values using bigint arithmetic (preserve precision)
+  // Remaining supply = maxSupply - currentSupply (from getCurrentSupply)
   const standardRemainingSupply = standardMax !== undefined && standardCurrent !== undefined 
-    ? Number(standardMax - standardCurrent) 
+    ? standardMax - standardCurrent 
     : undefined;
-  const standardProgress = standardMax && standardCurrent !== undefined && Number(standardMax) > 0
-    ? (Number(standardCurrent) / Number(standardMax)) * 100 
+  const standardProgress = standardMax && standardCurrent !== undefined && standardMax > BigInt(0)
+    ? Number((standardCurrent * BigInt(10000)) / standardMax) / 100 // Use bigint for precision, then convert to number for percentage
     : 0;
 
-  const proMaxSupply = proMax !== undefined ? Number(proMax) : undefined;
   const proRemainingSupply = proMax !== undefined && proCurrent !== undefined 
-    ? Number(proMax - proCurrent) 
+    ? proMax - proCurrent 
     : undefined;
-  const proProgress = proMax && proCurrent !== undefined && Number(proMax) > 0
-    ? (Number(proCurrent) / Number(proMax)) * 100 
+  const proProgress = proMax && proCurrent !== undefined && proMax > BigInt(0)
+    ? Number((proCurrent * BigInt(10000)) / proMax) / 100 // Use bigint for precision, then convert to number for percentage
     : 0;
 
   // Track pending mint request details (per collection)
@@ -380,7 +387,9 @@ const NFTMintDashboard: React.FC = () => {
           {/* Title with Price */}
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-white">STANDARD TIER</h3>
-            <span className="text-xl font-bold text-orange-400">150 USDT</span>
+            <span className="text-xl font-bold text-orange-400">
+              {isLoadingStandardCollection ? '...' : formattedStandardPrice}
+            </span>
           </div>
 
           {/* Supply Information */}
@@ -389,13 +398,13 @@ const NFTMintDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-white mb-1">Supply Remaining</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : formatLargeNumber(standardRemainingSupply)}
+                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : formatSupplyNumber(standardRemainingSupply)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-white mb-1">Max Supply</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : formatLargeNumber(standardMaxSupply)}
+                  {isLoadingStandardSupply || isLoadingStandardCollection ? '...' : formatSupplyNumber(standardMax)}
                 </p>
               </div>
             </div>
@@ -476,7 +485,9 @@ const NFTMintDashboard: React.FC = () => {
           {/* Title with Price */}
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-white">PRO TIER</h3>
-            <span className="text-xl font-bold text-orange-400">250 USDT</span>
+            <span className="text-xl font-bold text-orange-400">
+              {isLoadingProCollection ? '...' : formattedProPrice}
+            </span>
           </div>
 
           {/* Supply Information */}
@@ -485,13 +496,13 @@ const NFTMintDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-white mb-1">Supply Remaining</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingProSupply || isLoadingProCollection ? '...' : formatLargeNumber(proRemainingSupply)}
+                  {isLoadingProSupply || isLoadingProCollection ? '...' : formatSupplyNumber(proRemainingSupply)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-white mb-1">Max Supply</p>
                 <p className="text-2xl font-bold text-orange-400">
-                  {isLoadingProSupply || isLoadingProCollection ? '...' : formatLargeNumber(proMaxSupply)}
+                  {isLoadingProSupply || isLoadingProCollection ? '...' : formatSupplyNumber(proMax)}
                 </p>
               </div>
             </div>

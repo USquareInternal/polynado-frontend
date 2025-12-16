@@ -336,3 +336,38 @@ export const useWhitelistMint = () => {
   };
 };
 
+/**
+ * Hook to join Polynado via joinPolynado(userId, referrerId, email)
+ */
+export const useJoinPolynado = () => {
+  const contractAddress = getContractAddress();
+
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const joinPolynado = async (userId: string, referrerId: string, email: string) => {
+    if (!contractAddress) {
+      throw new Error('NFT contract address not set');
+    }
+
+    writeContract({
+      address: contractAddress,
+      abi: NFTmintABI,
+      functionName: 'joinPolynado',
+      args: [userId, referrerId || '', email],
+    });
+  };
+
+  return {
+    joinPolynado,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+};
+

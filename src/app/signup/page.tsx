@@ -2,17 +2,23 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { verifyReferralCode, signup, storeToken, storeUserData } from '@/services/authService';
+import { verifyReferralCode, signup, storeToken, storeUserData, getUserData } from '@/services/authService';
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
+import { useAccount } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useJoinPolynado } from '@/utils/nftContract';
 
-type SignupStep = 1 | 2 | 3;
+type SignupStep = 1 | 2 | 3 | 4;
 
 const SignupPage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isConnected, address } = useAccount();
+  const { joinPolynado, hash, isPending: isJoinPending, isConfirming: isJoinConfirming, isSuccess: isJoinSuccess, error: joinError, reset: resetJoin } = useJoinPolynado();
   const [step, setStep] = useState<SignupStep>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [referralVerified, setReferralVerified] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
   const [formData, setFormData] = useState({
     referralCode: '',
     termsAccepted: false,
@@ -106,10 +112,8 @@ const SignupPage: React.FC = () => {
           storeToken(response.token);
           storeUserData(response.user);
           showSuccessToast('Account created successfully!');
-          // Navigate to home page
-          setTimeout(() => {
-            router.push('/');
-          }, 1000);
+          // Move to wallet connection step
+          setStep(4);
         }
       } catch (error: any) {
         showErrorToast(error.message || 'Failed to create account');
@@ -601,6 +605,135 @@ const SignupPage: React.FC = () => {
     </form>
   );
 
+  // Handle joinPolynado success
+  useEffect(() => {
+    if (isJoinSuccess && hash && step === 4) {
+      showSuccessToast('Successfully joined Polynado!');
+      setHasJoined(true);
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        router.push('/');
+      }, 1500);
+    }
+  }, [isJoinSuccess, hash, step, router]);
+
+  // Handle joinPolynado error
+  useEffect(() => {
+    if (joinError && step === 4) {
+      showErrorToast(joinError.message || 'Failed to join Polynado. Please try again.');
+      resetJoin();
+    }
+  }, [joinError, step, resetJoin]);
+
+  const handleJoinPolynado = async () => {
+    if (!isConnected) {
+      showWarningToast('Please connect your wallet to continue');
+      return;
+    }
+
+    // Get user data
+    const userData = getUserData();
+    if (!userData) {
+      showErrorToast('User data not found. Please try again.');
+      return;
+    }
+
+    // Extract parameters
+    const userId = userData.reffralId || userData._id;
+    const referrerId = (userData as any).refferedBy || '';
+    const email = userData.email;
+
+    if (!userId || !email) {
+      showErrorToast('Missing user information. Please try again.');
+      return;
+    }
+
+    try {
+      await joinPolynado(userId, referrerId, email);
+    } catch (err: any) {
+      showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
+    }
+  };
+
+  // Step 4: Wallet Connection
+  const renderStep4 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <h1 className="text-3xl font-bold text-white mb-2">
+          Connect Your Wallet
+        </h1>
+        <p className="text-gray-400 text-sm">
+          Connect your wallet to complete your account setup and access the dashboard
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center gap-4 py-4">
+        <div className="w-full flex justify-center">
+          <ConnectButton
+            showBalance={false}
+            accountStatus="address"
+            chainStatus="none"
+          />
+        </div>
+
+        {isConnected && address && (
+          <div className="w-full mt-4 p-4 rounded-lg border border-green-500/30 bg-green-500/10">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-green-400 text-sm font-medium">Wallet Connected</span>
+            </div>
+            <p className="text-gray-300 text-xs break-all">{address}</p>
+          </div>
+        )}
+      </div>
+
+      {hash && (
+        <div className="text-center">
+          <p className="text-xs text-gray-400">
+            Transaction: {hash.slice(0, 6)}...{hash.slice(-4)}
+          </p>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-4">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex-1 px-4 py-3 rounded-lg font-medium text-white border border-gray-600 hover:border-gray-500 hover:bg-gray-800/50 bg-transparent transition-all cursor-pointer"
+          style={{ 
+            backgroundColor: 'transparent',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+          }}
+        >
+          BACK
+        </button>
+        <button
+          type="button"
+          onClick={handleJoinPolynado}
+          disabled={!isConnected || isLoading || isJoinPending || isJoinConfirming || hasJoined}
+          className="flex-1 px-4 py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
+          style={{
+            backgroundColor: (isConnected && !isLoading && !isJoinPending && !isJoinConfirming && !hasJoined) ? '#DB7A23' : '#666666',
+          }}
+          onMouseEnter={(e) => {
+            if (isConnected && !isLoading && !isJoinPending && !isJoinConfirming && !hasJoined) {
+              e.currentTarget.style.backgroundColor = '#E88A33';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (isConnected && !isLoading && !isJoinPending && !isJoinConfirming && !hasJoined) {
+              e.currentTarget.style.backgroundColor = '#DB7A23';
+            }
+          }}
+        >
+          {isJoinPending || isJoinConfirming ? 'Processing...' : hasJoined ? 'Joined!' : 'CONTINUE'}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -659,6 +792,7 @@ const SignupPage: React.FC = () => {
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
+          {step === 4 && renderStep4()}
         </div>
       </div>
     </div>

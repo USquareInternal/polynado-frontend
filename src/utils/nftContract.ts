@@ -24,6 +24,13 @@ const ERC20_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
+  {
+    inputs: [],
+    name: 'decimals',
+    outputs: [{ name: '', type: 'uint8' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
 ] as const;
 
 // Contract address - should be set in environment variables
@@ -56,16 +63,30 @@ export const useUSDTMeta = () => {
     query: { enabled: !!contractAddress },
   });
 
-  // Decimals are not exposed; fallback to env override or 6
-  const fallbackDecimals = Number(process.env.NEXT_PUBLIC_USDT_DECIMALS ?? 6);
+  const usdtAddress = usdtAddressResult.data as `0x${string}` | undefined;
+
+  // Try to read decimals from USDT contract
+  const decimalsResult = useReadContract({
+    address: usdtAddress,
+    abi: ERC20_ABI,
+    functionName: 'decimals',
+    query: { enabled: !!usdtAddress },
+  });
+
+  // Fallback to env override or 18 (most ERC20 tokens use 18 decimals)
+  const fallbackDecimals = Number(process.env.NEXT_PUBLIC_USDT_DECIMALS ?? 18);
+  const usdtDecimals = decimalsResult.data !== undefined 
+    ? Number(decimalsResult.data) 
+    : fallbackDecimals;
 
   return {
-    usdtAddress: usdtAddressResult.data as `0x${string}` | undefined,
-    usdtDecimals: fallbackDecimals,
-    isLoading: usdtAddressResult.isLoading,
-    error: usdtAddressResult.error,
+    usdtAddress,
+    usdtDecimals,
+    isLoading: usdtAddressResult.isLoading || decimalsResult.isLoading,
+    error: usdtAddressResult.error || decimalsResult.error,
     refetch: () => {
       usdtAddressResult.refetch?.();
+      decimalsResult.refetch?.();
     },
   };
 };

@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
     if (token && userData) {
       setIsLoggedIn(true);
       setUserEmail(userData.email);
-      setReferralId((userData as any)._id || null);
+      setReferralId((userData as any).userId || null);
     } else {
       setIsLoggedIn(false);
       setUserEmail(null);

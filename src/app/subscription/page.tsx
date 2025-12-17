@@ -172,8 +172,8 @@ const SubscriptionPage: React.FC = () => {
     const userData = getUserData();
     console.log('[Subscription Page] User Data from localStorage:', userData);
     if (userData) {
-      // Use _id or reffralId as userId
-      const id = (userData as any)._id || (userData as any).reffralId;
+      // Use userId or reffralId as userId
+      const id = (userData as any).userId || (userData as any).reffralId;
       console.log('[Subscription Page] Extracted User ID:', id);
       if (id) {
         setUserId(id);

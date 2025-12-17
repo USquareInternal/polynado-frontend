@@ -18,7 +18,7 @@ export const useWalletValidation = () => {
   useEffect(() => {
     const userData = getUserData();
     if (userData) {
-      const id = (userData as any)._id || (userData as any).reffralId;
+      const id = (userData as any).userId || (userData as any).reffralId;
       if (id) {
         setUserId(id);
       }

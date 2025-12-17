@@ -35,8 +35,8 @@ const NFTMintDashboard: React.FC = () => {
   useEffect(() => {
     const userData = getUserData();
     if (userData) {
-      // Use _id or reffralId as userId
-      const id = (userData as any)._id || (userData as any).reffralId;
+      // Use userId or reffralId as userId
+      const id = (userData as any).userId || (userData as any).reffralId;
       if (id) {
         setUserId(id);
       }

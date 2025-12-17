@@ -43,7 +43,7 @@ export interface LoginResponse {
 }
 
 export interface VerifyReferralRequest {
-  reffralCode: string;
+ referralCode: string;
 }
 
 export interface VerifyReferralResponse {
@@ -65,7 +65,7 @@ export interface ApiError {
  * Verify referral code
  */
 export const verifyReferralCode = async (
-  reffralCode: string
+ referralCode: string
 ): Promise<VerifyReferralResponse> => {  
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/verify-referral-code`, {
@@ -73,7 +73,7 @@ export const verifyReferralCode = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ reffralCode }),
+      body: JSON.stringify({referralCode }),
     });
 
     const data = await response.json();

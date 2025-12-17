@@ -7,7 +7,7 @@ import InviteLinksModal from './InviteLinksModal';
 
 interface UserDropdownProps {
   userEmail: string;
-  referralId: string;
+  referralId: string | null;
 }
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ userEmail, referralId }) => {
@@ -90,7 +90,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userEmail, referralId }) =>
                 />
                 <div>
                   <p className="text-white font-medium">{getDisplayName(userEmail)}</p>
-                  <p className="text-orange-400 text-sm">ID: {referralId}</p>
+                  <p className="text-orange-400 text-sm">ID: {referralId || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -134,7 +134,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userEmail, referralId }) =>
       {showInviteModal && (
         <InviteLinksModal
           userName={getDisplayName(userEmail)}
-          referralId={referralId}
+          referralId={referralId || ''}
           avatarUrl={getAvatarUrl(userEmail)}
           onClose={() => setShowInviteModal(false)}
         />

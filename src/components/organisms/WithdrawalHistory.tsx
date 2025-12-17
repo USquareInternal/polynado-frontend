@@ -52,27 +52,10 @@ export const WithdrawalHistory: React.FC = () => {
         });
 
         if (!response.ok) {
-          // If endpoint doesn't exist yet, use mock data
           if (response.status === 404) {
-            // Mock data for demonstration
-            const mockData: WithdrawalHistoryResponse = {
-              message: 'Withdrawal history fetched successfully',
-              success: true,
-              data: [
-                { _id: '1', date: '2025-12-07T14:23:00Z', amount: '150', status: 'Completed' },
-                { _id: '2', date: '2025-12-07T11:45:00Z', amount: '250', status: 'Completed' },
-                { _id: '3', date: '2025-12-06T19:12:00Z', amount: '250', status: 'Completed' },
-                { _id: '4', date: '2025-12-06T16:34:00Z', amount: '150', status: 'Processing' },
-                { _id: '5', date: '2025-12-05T22:18:00Z', amount: '250', status: 'Processing' },
-                { _id: '6', date: '2025-12-05T14:56:00Z', amount: '150', status: 'Processing' },
-                { _id: '7', date: '2025-12-04T20:41:00Z', amount: '250', status: 'Completed' },
-                { _id: '8', date: '2025-12-04T14:56:00Z', amount: '150', status: 'Completed' },
-                { _id: '9', date: '2025-12-04T11:59:00Z', amount: '150', status: 'Completed' },
-              ],
-            };
-            setWithdrawals(mockData.data);
-            const total = mockData.data.reduce((sum, w) => sum + parseFloat(w.amount), 0);
-            setTotalRewards(`${total} USDT`);
+            // No withdrawal history found
+            setWithdrawals([]);
+            setTotalRewards('0 USDT');
             setIsLoading(false);
             return;
           }
@@ -154,8 +137,18 @@ export const WithdrawalHistory: React.FC = () => {
             {error}
           </div>
         ) : withdrawals.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">
-            No withdrawal history found
+          <div className="p-12 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <WalletOutlined className="text-4xl text-gray-600" />
+              <div>
+                <p className="text-lg font-semibold text-gray-300 mb-1">
+                  No Withdrawal History Found
+                </p>
+                <p className="text-sm text-gray-500">
+                  You haven't made any withdrawals yet. Your withdrawal history will appear here once you request a payout.
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">

@@ -66,9 +66,9 @@ export interface ApiError {
  */
 export const verifyReferralCode = async (
   reffralCode: string
-): Promise<VerifyReferralResponse> => {
+): Promise<VerifyReferralResponse> => {  
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/verify-reffral-code`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/verify-referral-code`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -7,6 +7,7 @@ import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toas
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useJoinPolynado } from '@/utils/nftContract';
+import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
@@ -17,6 +18,7 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showWalletConnection, setShowWalletConnection] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,19 +245,33 @@ const LoginPage: React.FC = () => {
                   <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
                     Password
                   </label>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 rounded-lg bg-black/40 border border-gray-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all"
-                    placeholder="Enter your password"
-                    style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                    }}
-                  />
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full px-4 py-3 pr-12 rounded-lg bg-black/40 border border-gray-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all"
+                      placeholder="Enter your password"
+                      style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors focus:outline-none"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <EyeInvisibleOutlined className="text-lg" />
+                      ) : (
+                        <EyeOutlined className="text-lg" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Login Button */}

@@ -155,6 +155,8 @@ export const login = async (
 export const storeToken = (token: string) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('authToken', token);
+    // Dispatch custom event to notify components of auth state change
+    window.dispatchEvent(new Event('authStateChanged'));
   }
 };
 
@@ -175,6 +177,8 @@ export const removeToken = () => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
+    // Dispatch custom event to notify components of auth state change
+    window.dispatchEvent(new Event('authStateChanged'));
   }
 };
 
@@ -184,6 +188,8 @@ export const removeToken = () => {
 export const storeUserData = (userData: LoginResponse['user'] | SignupResponse['user']) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('userData', JSON.stringify(userData));
+    // Dispatch custom event to notify components of auth state change
+    window.dispatchEvent(new Event('authStateChanged'));
   }
 };
 

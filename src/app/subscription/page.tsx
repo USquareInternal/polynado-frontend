@@ -24,14 +24,14 @@ const SubscriptionPage: React.FC = () => {
       `}} />
       <div 
         className="min-h-screen relative overflow-hidden"
-        style={{ 
-          backgroundColor: '#000000',
-          backgroundImage: `
-            radial-gradient(circle at 20% 30%, rgba(219, 122, 35, 0.08) 0%, transparent 50%),
-            radial-gradient(circle at 80% 70%, rgba(219, 122, 35, 0.06) 0%, transparent 50%),
-            linear-gradient(135deg, rgba(30, 32, 34, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%)
-          `
-        }}
+        // style={{ 
+        //   backgroundColor: '#000000',
+        //   backgroundImage: `
+        //     radial-gradient(circle at 20% 30%, rgba(219, 122, 35, 0.08) 0%, transparent 50%),
+        //     radial-gradient(circle at 80% 70%, rgba(219, 122, 35, 0.06) 0%, transparent 50%),
+        //     linear-gradient(135deg, rgba(30, 32, 34, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%)
+        //   `
+        // }}
       >
         {/* Subtle circuit board pattern background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -173,8 +173,31 @@ const SubscriptionPage: React.FC = () => {
                   'linear-gradient(180deg, #0a0a0a 0%, #0e0e0e 45%, #0a0a0a 100%)',
               }}
             >
+              {/* Video Background */}
+              <div className="absolute inset-0 overflow-hidden">
+                <video
+                  src="/saas-pro.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover opacity-50"
+                  style={{
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                  }}
+                />
+                {/* Dark overlay to ensure text readability */}
+                <div 
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(10, 10, 10, 0.7) 0%, rgba(14, 14, 14, 0.6) 45%, rgba(10, 10, 10, 0.7) 100%)',
+                  }}
+                />
+              </div>
+
               {/* Best Value Badge */}
-              <div className="absolute top-4 right-4">
+              <div className="absolute top-4 right-4 z-10">
                 <div 
                   className="px-3 py-1 rounded-md text-xs font-bold text-white"
                   style={{
@@ -186,7 +209,7 @@ const SubscriptionPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full relative z-10">
                 <div className="mb-6">
                   <h3 className="text-2xl font-bold text-white mb-2">Pro Subscription</h3>
                   <div className="flex items-baseline gap-2">

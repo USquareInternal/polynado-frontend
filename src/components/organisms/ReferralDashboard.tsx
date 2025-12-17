@@ -7,7 +7,7 @@ import { ReferralLinkInput } from '@/components/molecules/ReferralLinkInput';
 import { QRCodeSection } from '@/components/molecules/QRCodeSection';
 import { RewardCard } from '@/components/molecules/RewardCard';
 import { Heading } from '@/components/atoms/Heading';
-import { getToken } from '@/services/authService';
+import { getToken, getUserData } from '@/services/authService';
 
 // Define the props for the component
 interface ReferralDashboardProps {
@@ -44,9 +44,21 @@ interface ReferralEvent {
 
 // Update the component signature to accept props
 export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage = false }) => {
-  const referralLink = 'https://polynado.xyz/?ref=dave123';
   const [referralEvents, setReferralEvents] = useState<ReferralEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [referralLink, setReferralLink] = useState('');
+  
+  // Get userId from userData for referral link
+  useEffect(() => {
+    const userData = getUserData() as any;
+    const userId = userData?.userId || '';
+    if (userId) {
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://polynado.xyz';
+      setReferralLink(`${baseUrl}/signup?ref=${userId}`);
+    } else {
+      setReferralLink('');
+    }
+  }, []);
 
   const stats = [
     { value: 12, label: 'Total Referred Users', iconType: 'users' as const },

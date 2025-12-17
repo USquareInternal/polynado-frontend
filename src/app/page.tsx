@@ -9,6 +9,7 @@ import { HeroTerminal } from '@/components/organisms/HeroTerminal';
 import { MarketMovers } from '@/components/organisms/MarketMovers';
 import { MispricingTable } from '@/components/organisms/MispricingTable';
 import { ReferralDashboard } from '@/components/organisms/ReferralDashboard';
+import { useWalletValidation } from '@/hooks/useWalletValidation';
 
 // --- Mock Data for MispricingTable ---
 const mockMispricingData = [
@@ -57,6 +58,9 @@ const DashboardPageContent: React.FC = () => {
 const DashboardPage: React.FC = () => {
   const router = useRouter();
   const { isConnected } = useAccount();
+  
+  // Validate wallet address mapping
+  useWalletValidation();
 
   // Check authentication and wallet connection
   useEffect(() => {

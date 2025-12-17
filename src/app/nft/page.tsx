@@ -1,7 +1,9 @@
+'use client';
 import React from 'react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { NFTHeaderBanner } from '@/components/organisms/NFTHeaderBanner';
 import { NFTCollectionGrid } from '@/components/organisms/NFTCollectionGrid';
+import { useWalletValidation } from '@/hooks/useWalletValidation';
 
 const NFTPageContent: React.FC = () => {
   return (
@@ -13,6 +15,9 @@ const NFTPageContent: React.FC = () => {
 };
 
 const NFTPage: React.FC = () => {
+  // Validate wallet address mapping
+  useWalletValidation();
+  
   return (
     <MainLayout>
       <NFTPageContent />

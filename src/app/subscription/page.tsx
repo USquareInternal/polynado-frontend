@@ -6,8 +6,9 @@ import { useAccount, useReadContract } from 'wagmi';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { CheckOutlined, CrownOutlined, ThunderboltOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { getUserData } from '@/services/authService';
-import { useSubscriptionPrices, useBuyStandardSubscription, useBuyProSubscription, useUSDTMeta, useApproveUSDT, getNFTContractAddress, useSubscriptionInfo, useUserIdByWallet } from '@/utils/nftContract';
+import { useSubscriptionPrices, useBuyStandardSubscription, useBuyProSubscription, useUSDTMeta, useApproveUSDT, getNFTContractAddress, useSubscriptionInfo, useUserIdByWallet, useUserInfo } from '@/utils/nftContract';
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
+import { useWalletValidation } from '@/hooks/useWalletValidation';
 
 const SubscriptionPage: React.FC = () => {
   const router = useRouter();
@@ -24,7 +25,18 @@ const SubscriptionPage: React.FC = () => {
   // Get subscription info for logged-in user
   const { subscriptionInfo, isLoading: isLoadingSubscriptionInfo, refetch: refetchSubscriptionInfo } = useSubscriptionInfo(userId || undefined);
   
-  // Check wallet to userId mapping
+  // Get user info to check which NFTs they've minted
+  const { userInfo, isLoading: isLoadingUserInfo, refetch: refetchUserInfo } = useUserInfo(userId || undefined);
+  
+  // Check which NFTs user has minted
+  const hasStandardNFT = userInfo?.collectionIds?.some(id => Number(id) === 1) ?? false;
+  const hasProNFT = userInfo?.collectionIds?.some(id => Number(id) === 2) ?? false;
+  const hasAnyNFT = hasStandardNFT || hasProNFT;
+  
+  // Validate wallet address mapping
+  const { isWalletMismatch } = useWalletValidation();
+  
+  // Check wallet to userId mapping (for display purposes)
   const { userId: walletUserId, isLoading: isLoadingWalletMapping } = useUserIdByWallet(address);
   
   // Check if subscription is active
@@ -173,20 +185,7 @@ const SubscriptionPage: React.FC = () => {
     }
   }, []);
 
-  // Check wallet address mapping and validate
-  useEffect(() => {
-    if (isConnected && address && userId && walletUserId && !isLoadingWalletMapping) {
-      console.log('[Subscription Page] Wallet Mapping Check:', {
-        loggedInUserId: userId,
-        walletUserId: walletUserId,
-        walletAddress: address,
-      });
-      
-      if (walletUserId !== userId && walletUserId !== '') {
-        showErrorToast('Wallet address does not match your account. Please connect the correct wallet address.');
-      }
-    }
-  }, [isConnected, address, userId, walletUserId, isLoadingWalletMapping]);
+  // Wallet validation is handled by useWalletValidation hook
 
   // Update remaining time countdown
   useEffect(() => {
@@ -399,11 +398,8 @@ const SubscriptionPage: React.FC = () => {
   const isProProcessing = (subscriptionStep === 'approving' || subscriptionStep === 'buying') && pendingSubscriptionType === 'pro' && (isApproving || isBuying);
   
   // Disable buttons if subscription is active
-  const isStandardDisabled = Boolean(isStandardProcessing || !userId || !isConnected || isSubscriptionActive || isLoadingSubscriptionInfo);
-  const isProDisabled = Boolean(isProProcessing || !userId || !isConnected || isSubscriptionActive || isLoadingSubscriptionInfo);
-  
-  // Check if wallet mapping is incorrect
-  const isWalletMismatch = Boolean(isConnected && address && userId && walletUserId && walletUserId !== userId && walletUserId !== '');
+  const isStandardDisabled = Boolean(isStandardProcessing || !userId || !isConnected || isSubscriptionActive || isLoadingSubscriptionInfo || hasAnyNFT);
+  const isProDisabled = Boolean(isProProcessing || !userId || !isConnected || isSubscriptionActive || isLoadingSubscriptionInfo || hasAnyNFT);
   return (
     <MainLayout>
       <style dangerouslySetInnerHTML={{__html: `
@@ -487,30 +483,49 @@ const SubscriptionPage: React.FC = () => {
 
                 {/* Content */}
                 <div className="flex-1 text-center sm:text-left">
-                  <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
-                    <ThunderboltOutlined className="text-gray-400 text-lg" />
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Important Note</span>
-                  </div>
-                  <p className="text-white text-lg sm:text-xl font-semibold mb-1">
-                    Unlock <span className="text-orange-400">PERMANENT PRO ACCESS</span>
-                  </p>
-                  <p className="text-gray-400 text-sm sm:text-base">
-                    Buy the NFT and Never Pay a Monthly Fee Again!
-                  </p>
+                  {hasAnyNFT ? (
+                    <>
+                      <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                        <CheckCircleOutlined className="text-green-400 text-lg" />
+                        <span className="text-xs font-bold text-green-400 uppercase tracking-wider">NFT Minted</span>
+                      </div>
+                      <p className="text-white text-lg sm:text-xl font-semibold mb-1">
+                        <span className="text-green-400">NFT MINTED</span>
+                      </p>
+                      <p className="text-gray-400 text-sm sm:text-base">
+                        Eligible Life Time PRO Access
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                        <ThunderboltOutlined className="text-gray-400 text-lg" />
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Important Note</span>
+                      </div>
+                      <p className="text-white text-lg sm:text-xl font-semibold mb-1">
+                        Unlock <span className="text-orange-400">PERMANENT PRO ACCESS</span>
+                      </p>
+                      <p className="text-gray-400 text-sm sm:text-base">
+                        Buy the NFT and Never Pay a Monthly Fee Again!
+                      </p>
+                    </>
+                  )}
                 </div>
 
-                {/* CTA Button */}
-                <Link href="/nft-mint" className="flex-shrink-0">
-                  <button
-                    className="px-6 py-3 rounded-lg font-bold text-white transition-all duration-200 hover:scale-105 hover:shadow-xl whitespace-nowrap"
-                    style={{
-                      backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
-                      boxShadow: '0 4px 15px rgba(219, 122, 35, 0.5), 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
-                    }}
-                  >
-                    MINT NFT
-                  </button>
-                </Link>
+                {/* CTA Button - Only show if NFT not minted */}
+                {!hasAnyNFT && (
+                  <Link href="/nft-mint" className="flex-shrink-0">
+                    <button
+                      className="px-6 py-3 rounded-lg font-bold text-white transition-all duration-200 hover:scale-105 hover:shadow-xl whitespace-nowrap"
+                      style={{
+                        backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                        boxShadow: '0 4px 15px rgba(219, 122, 35, 0.5), 3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+                      }}
+                    >
+                      MINT NFT
+                    </button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

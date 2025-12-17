@@ -15,20 +15,33 @@ import {
   useWhitelistMint,
   useCollectionInfo,
   useCollectionSupply,
+  useUserInfo,
 } from '@/utils/nftContract';
 import { showSuccessAlert,showFailedAlert } from "@/utils/SweetAlertUtils";
+import { useWalletValidation } from '@/hooks/useWalletValidation';
+import { getUserData } from '@/services/authService';
 
 const NFTMintDashboard: React.FC = () => {
   const { isConnected, address } = useAccount();
   const [mintingStep, setMintingStep] = useState<'idle' | 'approving' | 'minting' | 'success' | 'error'>('idle');
   const [standardError, setStandardError] = useState<string | null>(null);
   const [proError, setProError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Validate wallet address mapping
+  useWalletValidation();
 
-  // Derive a userId (login not wired yet)
-  const userId = React.useMemo(
-    () => (address ? address : `guest-${Math.random().toString(36).slice(2, 8)}`),
-    [address]
-  );
+  // Get user ID from localStorage (from login response)
+  useEffect(() => {
+    const userData = getUserData();
+    if (userData) {
+      // Use _id or reffralId as userId
+      const id = (userData as any)._id || (userData as any).reffralId;
+      if (id) {
+        setUserId(id);
+      }
+    }
+  }, []);
 
   // Read contract data (per collection)
   const { collection: standardCollection, isLoading: isLoadingStandardCollection } = useCollectionInfo(1);
@@ -39,9 +52,16 @@ const NFTMintDashboard: React.FC = () => {
   const { publicMintActive: publicMintActivePro, isLoading: isLoadingMintActivePro } = usePublicMintActive(2);
   const { whitelistMintActive: whitelistMintActiveStandard, isLoading: isLoadingWhitelistActiveStandard } = useWhitelistMintActive(1);
   const { whitelistMintActive: whitelistMintActivePro, isLoading: isLoadingWhitelistActivePro } = useWhitelistMintActive(2);
-  const { isWhitelisted, isLoading: isLoadingWhitelistStatus, refetch: refetchWhitelistStatus } = useWhitelistStatus(userId);
+  const { isWhitelisted, isLoading: isLoadingWhitelistStatus, refetch: refetchWhitelistStatus } = useWhitelistStatus(userId || undefined);
   const { balance, isLoading: isLoadingBalance, refetch: refetchBalance } = useNFTBalance(address as `0x${string}` | undefined);
   const { usdtAddress: usdtAddressFromContract, usdtDecimals, isLoading: isLoadingUsdtMeta } = useUSDTMeta();
+  
+  // Get user info to check which NFTs they've minted
+  const { userInfo, isLoading: isLoadingUserInfo, refetch: refetchUserInfo } = useUserInfo(userId || undefined);
+  
+  // Check which NFTs user has minted
+  const hasStandardNFT = userInfo?.collectionIds?.some(id => Number(id) === 1) ?? false;
+  const hasProNFT = userInfo?.collectionIds?.some(id => Number(id) === 2) ?? false;
 
   // Check USDT allowance
   const nftContractAddress = getNFTContractAddress();
@@ -75,7 +95,8 @@ const NFTMintDashboard: React.FC = () => {
     },
   });
 
-  const hasMinted = (balance ?? BigInt(0)) > BigInt(0);
+  // Check if user has minted any NFT (for backward compatibility)
+  const hasMinted = hasStandardNFT || hasProNFT;
 
   const standardMintPrice = standardCollection?.mintPrice;
   const proMintPrice = proCollection?.mintPrice;
@@ -192,6 +213,7 @@ const NFTMintDashboard: React.FC = () => {
     pendingCollectionId === 2 &&
     (mintingStep === 'approving' || mintingStep === 'minting' || isApproving || isMinting);
 
+  // Standard button: disabled if Pro NFT Minted OR Standard NFT is minted
   const standardButtonEnabled =
     isConnected &&
     !whitelistBlockedStandard &&
@@ -200,8 +222,10 @@ const NFTMintDashboard: React.FC = () => {
     standardMintPrice !== null &&
     mintingWindowOpenStandard &&
     !isStatusLoading &&
-    !hasMinted;
+    !hasStandardNFT &&
+    !hasProNFT; // Disable if Pro NFT Minted
 
+  // Pro button: disabled only if Pro NFT Minted (can upgrade from Standard)
   const proButtonEnabled =
     isConnected &&
     !whitelistBlockedPro &&
@@ -210,7 +234,7 @@ const NFTMintDashboard: React.FC = () => {
     proMintPrice !== null &&
     mintingWindowOpenPro &&
     !isStatusLoading &&
-    !hasMinted;
+    !hasProNFT; // Only disable if Pro NFT Minted (Standard NFT doesn't block Pro)
 
   // Handle approve success - proceed to mint
   useEffect(() => {
@@ -230,10 +254,11 @@ const NFTMintDashboard: React.FC = () => {
       refetchBalance?.();
       refetchStandardSupply?.();
       refetchProSupply?.();
+      refetchUserInfo?.(); // Refetch user info to update minted collections
       setPendingCollectionId(null);
       setPendingUserId(null);
     }
-  }, [isPublicMintSuccess, isWhitelistMintSuccess, mintingStep, refetchBalance, refetchStandardSupply, refetchProSupply]);
+  }, [isPublicMintSuccess, isWhitelistMintSuccess, mintingStep, refetchBalance, refetchStandardSupply, refetchProSupply, refetchUserInfo]);
 
   // Helper to assign error to the correct tier
   const setTierError = (collectionId: number | null, message: string | null) => {
@@ -282,6 +307,11 @@ const NFTMintDashboard: React.FC = () => {
   const handleMint = async (collectionId: number) => {
     if (!isConnected || !address) {
       setTierError(collectionId, 'Please connect your wallet');
+      return;
+    }
+
+    if (!userId) {
+      setTierError(collectionId, 'User ID not found. Please login again.');
       return;
     }
 
@@ -439,8 +469,10 @@ const NFTMintDashboard: React.FC = () => {
                   }
             }
           >
-            {hasMinted
-              ? 'Minted'
+            {hasProNFT
+              ? 'Pro NFT Minted'
+              : hasStandardNFT
+              ? 'Standard NFT is Minted'
               : !isConnected
               ? 'Connect Wallet'
               : whitelistBlockedStandard
@@ -537,8 +569,8 @@ const NFTMintDashboard: React.FC = () => {
                   }
             }
           >
-            {hasMinted
-              ? 'Minted'
+            {hasProNFT
+              ? 'Pro NFT Minted'
               : !isConnected
               ? 'Connect Wallet'
               : whitelistBlockedPro

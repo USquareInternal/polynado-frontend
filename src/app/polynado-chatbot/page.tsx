@@ -8,8 +8,11 @@ import {
   ExclamationCircleOutlined,
   LineChartOutlined 
 } from '@ant-design/icons';
+import { useWalletValidation } from '@/hooks/useWalletValidation';
 
 const PolynodoChatbot: React.FC = () => {
+  // Validate wallet address mapping
+  useWalletValidation();
   const [messages, setMessages] = useState([
     {
       id: 1,

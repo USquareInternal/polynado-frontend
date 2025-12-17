@@ -84,14 +84,13 @@ const PolynodoChatbot: React.FC = () => {
   return (
     <MainLayout>
       <div 
-        className="flex flex-col h-[calc(100vh-8rem)] bg-[#000000] relative overflow-hidden"
-        // style={{ 
-        //   backgroundImage: `
-        //     radial-gradient(circle at 20% 30%, rgba(219, 122, 35, 0.08) 0%, transparent 50%),
-        //     radial-gradient(circle at 80% 70%, rgba(219, 122, 35, 0.06) 0%, transparent 50%),
-        //     linear-gradient(135deg, rgba(30, 32, 34, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%)
-        //   `
-        // }}
+        className="flex flex-col fixed bg-[#000000] overflow-hidden lg:ml-20 z-30"
+        style={{
+          top: '64px', // Header height (h-16 = 64px)
+          left: '0',
+          right: '0',
+          bottom: '0',
+        }}
       >
         {/* Subtle circuit board pattern background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { MenuOutlined } from '@ant-design/icons';
 import { Heading } from '@/components/atoms/Heading';
 import WalletConnect from '../molecules/WalletConnectButton';
@@ -32,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [referralId, setReferralId] = useState<string | null>(null);
   const { address: wagmiAddress } = useAccount();
+  const pathname = usePathname();
   
   // Use wagmi address if available, otherwise fall back to prop
   const displayAddress = wagmiAddress || userAddress;
@@ -43,21 +45,47 @@ export const Header: React.FC<HeaderProps> = ({
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  useEffect(() => {
-    // Check if user is logged in
+  // Function to check and update auth state
+  const checkAuthState = () => {
     const token = getToken();
     const userData = getUserData();
     
     if (token && userData) {
       setIsLoggedIn(true);
       setUserEmail(userData.email);
-      setReferralId(userData.reffralId || null);
+      setReferralId((userData as any).userId || null);
     } else {
       setIsLoggedIn(false);
       setUserEmail(null);
       setReferralId(null);
     }
-  }, []);
+  };
+
+  useEffect(() => {
+    // Check auth state on mount and when pathname changes
+    checkAuthState();
+
+    // Listen to storage events (when authToken or userData changes in other tabs/windows)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'authToken' || e.key === 'userData') {
+        checkAuthState();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also listen to custom events for same-tab updates
+    const handleAuthChange = () => {
+      checkAuthState();
+    };
+
+    window.addEventListener('authStateChanged', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('authStateChanged', handleAuthChange);
+    };
+  }, [pathname]); // Re-check when route changes
 
   return (
     <header
@@ -85,19 +113,19 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* === Right Section: User Info/Login & Wallet Connect Buttons === */}
         <div className="flex items-center gap-3">
-          {isLoggedIn && userEmail && referralId ? (
+          {isLoggedIn && userEmail ? (
             // Display user dropdown when logged in
             <div className="flex items-center gap-3">
-              <UserDropdown userEmail={userEmail} referralId={referralId} />
+              <UserDropdown userEmail={userEmail} referralId={referralId || null} />
               {/* Display wallet address when connected */}
-              {isConnected && displayAddress && (
+              {/* {isConnected && displayAddress && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                   <span className="text-sm text-gray-300 font-mono">
                     {formatAddress(displayAddress)}
                   </span>
                 </div>
-              )}
+              )} */}
             </div>
           ) : (
             // Login Button with orange gradient

@@ -134,7 +134,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userEmail, referralId }) =>
       {showInviteModal && (
         <InviteLinksModal
           userName={getDisplayName(userEmail)}
-          referralId={referralId || ''}
+          userId={referralId || ''}
           avatarUrl={getAvatarUrl(userEmail)}
           onClose={() => setShowInviteModal(false)}
         />

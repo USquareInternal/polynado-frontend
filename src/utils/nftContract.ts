@@ -590,3 +590,55 @@ export const useUserIdByWallet = (walletAddress?: `0x${string}`) => {
   };
 };
 
+/**
+ * Hook to get user info including minted collections
+ */
+export const useUserInfo = (userId?: string) => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'getUserInfo',
+    args: userId ? [userId] : undefined,
+    query: {
+      enabled: !!contractAddress && !!userId,
+    },
+  });
+
+  const tuple = data as
+    | {
+        0?: string;
+        1?: string;
+        2?: string;
+        3?: bigint;
+        4?: boolean;
+        5?: bigint[];
+        userId?: string;
+        referrerId?: string;
+        email?: string;
+        referralRewards?: bigint;
+        isMinted?: boolean;
+        collectionIds?: bigint[];
+      }
+    | undefined;
+
+  const userInfo = tuple
+    ? {
+        userId: tuple.userId ?? tuple[0],
+        referrerId: tuple.referrerId ?? tuple[1],
+        email: tuple.email ?? tuple[2],
+        referralRewards: tuple.referralRewards ?? tuple[3],
+        isMinted: tuple.isMinted ?? tuple[4] ?? false,
+        collectionIds: tuple.collectionIds ?? tuple[5] ?? [],
+      }
+    : undefined;
+
+  return {
+    userInfo,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+

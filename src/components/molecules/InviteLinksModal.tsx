@@ -5,14 +5,14 @@ import { showSuccessToast } from '@/utils/toast';
 
 interface InviteLinksModalProps {
   userName: string;
-  referralId: string;
+  userId: string; // Changed from referralId to userId (will contain _id)
   avatarUrl: string;
   onClose: () => void;
 }
 
 const InviteLinksModal: React.FC<InviteLinksModalProps> = ({
   userName,
-  referralId,
+  userId,
   avatarUrl,
   onClose,
 }) => {
@@ -27,7 +27,7 @@ const InviteLinksModal: React.FC<InviteLinksModalProps> = ({
     return 'https://polynado.com'; // Fallback
   };
 
-  const referralLink = `${getBaseUrl()}/signup?ref=${referralId}`;
+  const referralLink = `${getBaseUrl()}/signup?ref=${userId}`;
 
   const copyToClipboard = async (text: string, type: 'id' | 'link') => {
     try {
@@ -66,7 +66,7 @@ const InviteLinksModal: React.FC<InviteLinksModalProps> = ({
             />
             <div>
               <p className="font-semibold text-white">{userName}</p>
-              <p className="text-sm text-orange-400">ID: {referralId}</p>
+              <p className="text-sm text-orange-400">ID: {userId}</p>
             </div>
           </div>
           <button
@@ -94,7 +94,7 @@ const InviteLinksModal: React.FC<InviteLinksModalProps> = ({
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                value={referralId}
+                value={userId}
                 readOnly
                 className="flex-1 px-4 py-3 rounded-lg border border-gray-700/50 bg-black/40 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50"
                 style={{
@@ -103,7 +103,7 @@ const InviteLinksModal: React.FC<InviteLinksModalProps> = ({
                 }}
               />
               <button
-                onClick={() => copyToClipboard(referralId, 'id')}
+                onClick={() => copyToClipboard(userId, 'id')}
                 className="px-4 py-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700/50 transition-colors"
               >
                 <CopyOutlined className={`text-gray-400 ${copiedId ? 'text-green-500' : ''}`} />

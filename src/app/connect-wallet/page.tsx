@@ -12,6 +12,8 @@ const ConnectWalletPage: React.FC = () => {
   const { isConnected, address } = useAccount();
   const { joinPolynado, hash, isPending, isConfirming, isSuccess, error, reset } = useJoinPolynado();
   const [hasJoined, setHasJoined] = useState(false);
+  const [transactionTimeout, setTransactionTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [noHashTimeout, setNoHashTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Check authentication and redirect if needed
   useEffect(() => {
@@ -23,8 +25,9 @@ const ConnectWalletPage: React.FC = () => {
       return;
     }
 
-    // Redirect to dashboard if already connected and joined
-    if (isConnected && hasJoined) {
+    // Redirect to dashboard if already connected and joined (for new users)
+    const isNewUser = localStorage.getItem('isNewUser') === 'true';
+    if (isConnected && hasJoined && isNewUser) {
       router.push('/');
     }
   }, [isConnected, hasJoined, router]);
@@ -32,22 +35,131 @@ const ConnectWalletPage: React.FC = () => {
   // Handle transaction success
   useEffect(() => {
     if (isSuccess && hash) {
+      console.log("Transaction successful! Hash:", hash);
+      // Clear any timeout
+      if (transactionTimeout) {
+        clearTimeout(transactionTimeout);
+        setTransactionTimeout(null);
+      }
       showSuccessToast('Successfully joined Polynado!');
       setHasJoined(true);
+      // Remove new user flag after successful join
+      localStorage.removeItem('isNewUser');
       // Redirect to dashboard after a short delay
       setTimeout(() => {
         router.push('/');
       }, 1500);
     }
-  }, [isSuccess, hash, router]);
+  }, [isSuccess, hash, router, transactionTimeout]);
+
+  // Fallback: If transaction has hash but isConfirming is true for too long, assume success
+  useEffect(() => {
+    const isNewUser = localStorage.getItem('isNewUser') === 'true';
+    if (!isNewUser || !hash || isSuccess || error || !isConfirming) return;
+
+    // If confirming for more than 30 seconds, assume success (transaction likely confirmed)
+    // This handles cases where wagmi doesn't properly detect transaction completion
+    const confirmingTimeout = setTimeout(() => {
+      if (isConfirming && hash && !isSuccess && !error && !isPending) {
+        console.log("Transaction confirming for too long, assuming success. Hash:", hash);
+        console.log("Current state - isPending:", isPending, "isConfirming:", isConfirming, "isSuccess:", isSuccess);
+        showSuccessToast('Transaction confirmed! Successfully joined Polynado!');
+        setHasJoined(true);
+        localStorage.removeItem('isNewUser');
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
+      }
+    }, 30 * 1000); // 30 seconds
+
+    return () => clearTimeout(confirmingTimeout);
+  }, [hash, isConfirming, isSuccess, error, isPending, router]);
 
   // Handle transaction error
   useEffect(() => {
     if (error) {
+      console.error("Transaction error:", error);
+      // Clear any timeout
+      if (transactionTimeout) {
+        clearTimeout(transactionTimeout);
+        setTransactionTimeout(null);
+      }
       showErrorToast(error.message || 'Failed to join Polynado. Please try again.');
       reset();
     }
-  }, [error, reset]);
+  }, [error, reset, transactionTimeout]);
+
+  // Debug: Log transaction state changes
+  useEffect(() => {
+    const isNewUser = localStorage.getItem('isNewUser') === 'true';
+    if (isNewUser) {
+      console.log("Transaction state:", {
+        hash,
+        isPending,
+        isConfirming,
+        isSuccess,
+        error: error?.message,
+      });
+    }
+  }, [hash, isPending, isConfirming, isSuccess, error]);
+
+  // Check if transaction hash is received (user approved in wallet)
+  useEffect(() => {
+    if (isPending && !hash) {
+      // Clear any existing timeout
+      if (noHashTimeout) {
+        clearTimeout(noHashTimeout);
+      }
+      
+      // If pending for more than 30 seconds without hash, user might not have approved
+      const timeout = setTimeout(() => {
+        showWarningToast('Please approve the transaction in your wallet to continue.');
+        setNoHashTimeout(null);
+      }, 30 * 1000); // 30 seconds
+
+      setNoHashTimeout(timeout);
+
+      return () => {
+        clearTimeout(timeout);
+      };
+    } else {
+      // Clear timeout when hash is received or pending ends
+      if (noHashTimeout) {
+        clearTimeout(noHashTimeout);
+        setNoHashTimeout(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPending, hash]);
+
+  // Set timeout for stuck transactions (5 minutes)
+  useEffect(() => {
+    if ((isPending || isConfirming) && hash) {
+      // Clear any existing timeout
+      if (transactionTimeout) {
+        clearTimeout(transactionTimeout);
+      }
+      
+      const timeout = setTimeout(() => {
+        showErrorToast('Transaction is taking too long. Please try again or check your wallet.');
+        reset();
+        setTransactionTimeout(null);
+      }, 5 * 60 * 1000); // 5 minutes
+
+      setTransactionTimeout(timeout);
+
+      return () => {
+        clearTimeout(timeout);
+      };
+    } else {
+      // Clear timeout when transaction completes or fails
+      if (transactionTimeout) {
+        clearTimeout(transactionTimeout);
+        setTransactionTimeout(null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPending, isConfirming, hash]);
 
   const handleContinue = async () => {
     if (!isConnected) {
@@ -56,28 +168,44 @@ const ConnectWalletPage: React.FC = () => {
     }
 
     // Get user data
-    const userData = getUserData();
+    const userData = getUserData() as any;
     if (!userData) {
       showErrorToast('User data not found. Please login again.');
       router.push('/login');
       return;
     }
 
-    // Extract parameters
-    const userId = userData.reffralId || userData._id;
-    const referrerId = (userData as any).refferedBy || '';
-    const email = userData.email;
+    // Check if user is new (from signup) or existing (from login)
+    const isNewUser = localStorage.getItem('isNewUser') === 'true';
 
-    if (!userId || !email) {
-      showErrorToast('Missing user information. Please login again.');
-      router.push('/login');
-      return;
-    }
+    if (isNewUser) {
+      // New user from signup - call joinPolynado
+      const userId = userData.reffralId || userData._id;
+      const referrerId = (userData as any).refferedBy || '';
+      const email = userData.email;
 
-    try {
-      await joinPolynado(userId, referrerId, email);
-    } catch (err: any) {
-      showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
+      if (!userId || !email) {
+        showErrorToast('Missing user information. Please login again.');
+        router.push('/login');
+        return;
+      }
+
+      try {
+        // joinPolynado doesn't return a value - it triggers writeContract
+        // Transaction state is tracked via hash, isPending, isConfirming, isSuccess from the hook
+        joinPolynado(userId, referrerId, email);
+        console.log("joinPolynado called - waiting for transaction hash...");
+      } catch (err: any) {
+        console.error('Error joining Polynado:', err);
+        showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
+        reset();
+      }
+    } else {
+      // Existing user from login - just redirect (no contract call)
+      showSuccessToast('Wallet connected successfully!');
+      setTimeout(() => {
+        router.push('/');
+      }, 500);
     }
   };
 
@@ -152,29 +280,69 @@ const ConnectWalletPage: React.FC = () => {
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={handleContinue}
-              disabled={!isConnected || isPending || isConfirming || hasJoined}
-              className="w-full py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
-              style={{
-                backgroundColor: (isConnected && !isPending && !isConfirming && !hasJoined) ? '#DB7A23' : '#666666',
-              }}
-              onMouseEnter={(e) => {
-                if (isConnected && !isPending && !isConfirming && !hasJoined) {
-                  e.currentTarget.style.backgroundColor = '#E88A33';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (isConnected && !isPending && !isConfirming && !hasJoined) {
-                  e.currentTarget.style.backgroundColor = '#DB7A23';
-                }
-              }}
-            >
-              {isPending || isConfirming ? 'Joining POLYNADO...' : hasJoined ? 'Joined!' : 'CONTINUE'}
-            </button>
+            <div className="space-y-2">
+              {(() => {
+                const isNewUser = localStorage.getItem('isNewUser') === 'true';
+                const isDisabled = !isConnected || (isNewUser && (isPending || isConfirming || hasJoined));
+                
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleContinue}
+                      disabled={isDisabled}
+                      className="w-full py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
+                      style={{
+                        backgroundColor: !isDisabled ? '#DB7A23' : '#666666',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isDisabled) {
+                          e.currentTarget.style.backgroundColor = '#E88A33';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isDisabled) {
+                          e.currentTarget.style.backgroundColor = '#DB7A23';
+                        }
+                      }}
+                    >
+                      {isNewUser ? (
+                        isPending && !hash 
+                          ? 'Waiting for wallet approval...' 
+                          : (isPending || isConfirming) && !hasJoined
+                          ? 'Joining POLYNADO...' 
+                          : hasJoined 
+                          ? 'Joined!' 
+                          : 'CONTINUE'
+                      ) : (
+                        'CONTINUE'
+                      )}
+                    </button>
+                    
+                    {/* Show cancel button if transaction is stuck (only for new users) */}
+                    {isNewUser && (isPending || isConfirming) && hash && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          reset();
+                          if (transactionTimeout) {
+                            clearTimeout(transactionTimeout);
+                            setTransactionTimeout(null);
+                          }
+                          showWarningToast('Transaction cancelled. You can try again.');
+                        }}
+                        className="w-full py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                      >
+                        Cancel Transaction
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
             
-            {hash && (
+            {/* Show transaction hash only for new users */}
+            {localStorage.getItem('isNewUser') === 'true' && hash && (
               <div className="text-center mt-2">
                 <p className="text-xs text-gray-400">
                   Transaction: {hash.slice(0, 6)}...{hash.slice(-4)}

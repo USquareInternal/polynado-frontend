@@ -23,6 +23,17 @@ const MiniLineGraph: React.FC<{ data: number[]; isPositive: boolean }> = ({ data
   const graphWidth = width - padding * 2;
   const graphHeight = height - padding * 2;
 
+  // Safety check: ensure data is an array with at least one element
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <svg width={width} height={height} className="inline-block">
+        <text x={width / 2} y={height / 2} textAnchor="middle" fontSize="8" fill="#666">
+          No data
+        </text>
+      </svg>
+    );
+  }
+
   // Normalize data to fit within graph bounds
   const min = Math.min(...data);
   const max = Math.max(...data);

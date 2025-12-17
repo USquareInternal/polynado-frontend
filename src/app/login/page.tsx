@@ -6,13 +6,11 @@ import { login, storeToken, storeUserData, getUserData } from '@/services/authSe
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useJoinPolynado } from '@/utils/nftContract';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
   const { isConnected, address } = useAccount();
-  const { joinPolynado, hash, isPending: isJoinPending, isConfirming: isJoinConfirming, isSuccess: isJoinSuccess, error: joinError, reset: resetJoin } = useJoinPolynado();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -49,57 +47,16 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Handle joinPolynado success
+  // Redirect to dashboard when wallet is connected (login flow - no joinPolynado call)
   useEffect(() => {
-    if (isJoinSuccess && hash && showWalletConnection) {
-      showSuccessToast('Successfully joined Polynado!');
-      setHasJoined(true);
-      // Redirect to dashboard after a short delay
+    if (isConnected && showWalletConnection && !hasJoined) {
+      // User is logging in, just redirect to dashboard (no contract call needed)
+      showSuccessToast('Wallet connected successfully!');
       setTimeout(() => {
         router.push('/');
-      }, 1500);
+      }, 500);
     }
-  }, [isJoinSuccess, hash, showWalletConnection, router]);
-
-  // Handle joinPolynado error
-  useEffect(() => {
-    if (joinError && showWalletConnection) {
-      showErrorToast(joinError.message || 'Failed to join Polynado. Please try again.');
-      resetJoin();
-    }
-  }, [joinError, showWalletConnection, resetJoin]);
-
-  const handleJoinPolynado = async () => {
-    if (!isConnected) {
-      showWarningToast('Please connect your wallet to continue');
-      return;
-    }
-
-    // Get user data
-    const userData = getUserData();
-    if (!userData) {
-      showErrorToast('User data not found. Please login again.');
-      router.push('/login');
-      return;
-    }
-
-    // Extract parameters
-    const userId = userData.reffralId || userData._id;
-    const referrerId = (userData as any).refferedBy || '';
-    const email = userData.email;
-
-    if (!userId || !email) {
-      showErrorToast('Missing user information. Please login again.');
-      router.push('/login');
-      return;
-    }
-
-    try {
-      await joinPolynado(userId, referrerId, email);
-    } catch (err: any) {
-      showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
-    }
-  };
+  }, [isConnected, showWalletConnection, hasJoined, router]);
 
   // Wallet Connection Screen
   const renderWalletConnection = () => (
@@ -135,34 +92,37 @@ const LoginPage: React.FC = () => {
         )}
       </div>
 
-      {hash && (
-        <div className="text-center">
-          <p className="text-xs text-gray-400">
-            Transaction: {hash.slice(0, 6)}...{hash.slice(-4)}
-          </p>
-        </div>
-      )}
 
       <button
         type="button"
-        onClick={handleJoinPolynado}
-        disabled={!isConnected || isJoinPending || isJoinConfirming || hasJoined}
+        onClick={() => {
+          if (!isConnected) {
+            showWarningToast('Please connect your wallet to continue');
+            return;
+          }
+          // For login flow, just redirect (no joinPolynado call)
+          showSuccessToast('Wallet connected successfully!');
+          setTimeout(() => {
+            router.push('/');
+          }, 500);
+        }}
+        disabled={!isConnected || hasJoined}
         className="w-full py-3 rounded-lg font-semibold text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer"
         style={{
-          backgroundColor: (isConnected && !isJoinPending && !isJoinConfirming && !hasJoined) ? '#DB7A23' : '#666666',
+          backgroundColor: (isConnected && !hasJoined) ? '#DB7A23' : '#666666',
         }}
         onMouseEnter={(e) => {
-          if (isConnected && !isJoinPending && !isJoinConfirming && !hasJoined) {
+          if (isConnected && !hasJoined) {
             e.currentTarget.style.backgroundColor = '#E88A33';
           }
         }}
         onMouseLeave={(e) => {
-          if (isConnected && !isJoinPending && !isJoinConfirming && !hasJoined) {
+          if (isConnected && !hasJoined) {
             e.currentTarget.style.backgroundColor = '#DB7A23';
           }
         }}
       >
-        {isJoinPending || isJoinConfirming ? 'Processing...' : hasJoined ? 'Joined!' : 'CONTINUE'}
+        {hasJoined ? 'Redirecting...' : 'CONTINUE'}
       </button>
     </div>
   );

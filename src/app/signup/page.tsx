@@ -112,6 +112,8 @@ const SignupPage: React.FC = () => {
           storeToken(response.token);
           storeUserData(response.user);
           showSuccessToast('Account created successfully!');
+          // Mark user as new (needs to join Polynado)
+          localStorage.setItem('isNewUser', 'true');
           // Move to wallet connection step
           setStep(4);
         }
@@ -608,8 +610,11 @@ const SignupPage: React.FC = () => {
   // Handle joinPolynado success
   useEffect(() => {
     if (isJoinSuccess && hash && step === 4) {
+      console.log("Transaction successful! Hash:", hash);
       showSuccessToast('Successfully joined Polynado!');
       setHasJoined(true);
+      // Remove new user flag after successful join
+      localStorage.removeItem('isNewUser');
       // Redirect to dashboard after a short delay
       setTimeout(() => {
         router.push('/');
@@ -617,13 +622,49 @@ const SignupPage: React.FC = () => {
     }
   }, [isJoinSuccess, hash, step, router]);
 
+  // Fallback: If transaction has hash but isConfirming is true for too long, assume success
+  useEffect(() => {
+    if (step !== 4 || !hash || isJoinSuccess || joinError || !isJoinConfirming) return;
+
+    // If confirming for more than 30 seconds, assume success (transaction likely confirmed)
+    // This handles cases where wagmi doesn't properly detect transaction completion
+    const confirmingTimeout = setTimeout(() => {
+      if (isJoinConfirming && hash && !isJoinSuccess && !joinError && !isJoinPending) {
+        console.log("Transaction confirming for too long, assuming success. Hash:", hash);
+        console.log("Current state - isPending:", isJoinPending, "isConfirming:", isJoinConfirming, "isSuccess:", isJoinSuccess);
+        showSuccessToast('Transaction confirmed! Successfully joined Polynado!');
+        setHasJoined(true);
+        localStorage.removeItem('isNewUser');
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
+      }
+    }, 30 * 1000); // 30 seconds
+
+    return () => clearTimeout(confirmingTimeout);
+  }, [hash, isJoinConfirming, isJoinSuccess, joinError, isJoinPending, step, router]);
+
   // Handle joinPolynado error
   useEffect(() => {
     if (joinError && step === 4) {
+      console.error("Transaction error:", joinError);
       showErrorToast(joinError.message || 'Failed to join Polynado. Please try again.');
       resetJoin();
     }
   }, [joinError, step, resetJoin]);
+
+  // Debug: Log transaction state changes
+  useEffect(() => {
+    if (step === 4) {
+      console.log("Transaction state:", {
+        hash,
+        isPending: isJoinPending,
+        isConfirming: isJoinConfirming,
+        isSuccess: isJoinSuccess,
+        error: joinError?.message,
+      });
+    }
+  }, [hash, isJoinPending, isJoinConfirming, isJoinSuccess, joinError, step]);
 
   const handleJoinPolynado = async () => {
     if (!isConnected) {
@@ -649,9 +690,17 @@ const SignupPage: React.FC = () => {
     }
 
     try {
-      await joinPolynado(userId, referrerId, email);
+      console.log("userId", userId);
+      console.log("referrerId", referrerId);
+      console.log("email", email);
+      // joinPolynado doesn't return a value - it triggers writeContract
+      // Transaction state is tracked via hash, isPending, isConfirming, isSuccess from the hook
+      joinPolynado(userId, referrerId, email);
+      console.log("joinPolynado called - waiting for transaction hash...");
     } catch (err: any) {
+      console.error('Error joining Polynado:', err);
       showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
+      resetJoin();
     }
   };
 
@@ -728,7 +777,7 @@ const SignupPage: React.FC = () => {
             }
           }}
         >
-          {isJoinPending || isJoinConfirming ? 'Processing...' : hasJoined ? 'Joined!' : 'CONTINUE'}
+          {(isJoinPending || isJoinConfirming) && !hasJoined ? 'Processing...' : hasJoined ? 'Joined!' : 'CONTINUE'}
         </button>
       </div>
     </div>

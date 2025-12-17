@@ -6,6 +6,7 @@ import { Heading } from '@/components/atoms/Heading';
 import WalletConnect from '../molecules/WalletConnectButton';
 import UserDropdown from '../molecules/UserDropdown';
 import { getToken, getUserData } from '@/services/authService';
+import { useAccount } from 'wagmi';
 
 // Define the type for the component's props
 interface HeaderProps {
@@ -30,6 +31,17 @@ export const Header: React.FC<HeaderProps> = ({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [referralId, setReferralId] = useState<string | null>(null);
+  const { address: wagmiAddress } = useAccount();
+  
+  // Use wagmi address if available, otherwise fall back to prop
+  const displayAddress = wagmiAddress || userAddress;
+  
+  // Format wallet address (first 6 + last 4 characters)
+  const formatAddress = (addr: string | undefined): string => {
+    if (!addr) return '';
+    if (addr.length <= 10) return addr;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   useEffect(() => {
     // Check if user is logged in
@@ -75,7 +87,18 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3">
           {isLoggedIn && userEmail && referralId ? (
             // Display user dropdown when logged in
-            <UserDropdown userEmail={userEmail} referralId={referralId} />
+            <div className="flex items-center gap-3">
+              <UserDropdown userEmail={userEmail} referralId={referralId} />
+              {/* Display wallet address when connected */}
+              {isConnected && displayAddress && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800/50 border border-gray-700/50">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="text-sm text-gray-300 font-mono">
+                    {formatAddress(displayAddress)}
+                  </span>
+                </div>
+              )}
+            </div>
           ) : (
             // Login Button with orange gradient
             <Link href="/login">

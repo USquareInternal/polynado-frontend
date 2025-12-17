@@ -2,22 +2,20 @@
 import React, { useState } from 'react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { Header } from '@/components/organisms/Header';
-import { Footer } from '@/components/atoms/Footer'
+import { Footer } from '@/components/atoms/Footer';
+import { useAccount } from 'wagmi';
 
 interface MainLayoutProps {
     children: React.ReactNode;
 }
 
-// --- Mock Wallet/Auth State for Layout Context ---
-const MOCK_USER_ADDRESS = "0xPolynado12345...89abc";
-
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isConnected, setIsConnected] = useState(false);
+    const { isConnected, address } = useAccount();
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-    const handleConnect = () => setIsConnected(true);
-    const handleDisconnect = () => setIsConnected(false);
+    const handleConnect = () => {}; // Wagmi handles connection
+    const handleDisconnect = () => {}; // Wagmi handles disconnection
 
     // The 'lg' breakpoint matches the desktop view where the sidebar is always visible.
     // The 'pl-20' matches the desktopWidthClass ('lg:w-20') in Sidebar.tsx.
@@ -45,7 +43,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     welcomeText="Welcome Back !"
                     onMenuClick={toggleSidebar}
                     isConnected={isConnected}
-                    userAddress={MOCK_USER_ADDRESS}
+                    userAddress={address}
                     onConnect={handleConnect}
                     onDisconnect={handleDisconnect}
                 />

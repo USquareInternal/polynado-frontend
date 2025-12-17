@@ -11,11 +11,31 @@ import { MispricingTable } from '@/components/organisms/MispricingTable';
 import { ReferralDashboard } from '@/components/organisms/ReferralDashboard';
 
 // --- Mock Data for MispricingTable ---
-// Use the same mock structure as defined previously
 const mockMispricingData = [
-  { id: 1, marketName: 'US Inflation Rate Q3 2026', category: 'Finance', priceA: 0.45, priceB: 0.50, difference: '5.0%', liquidity: '$150k', risk: 'Medium' },
-  { id: 2, marketName: 'Ethereum Merge Date', category: 'Crypto', priceA: 0.90, priceB: 0.95, difference: '5.0%', liquidity: '$320k', risk: 'Low' },
-  { id: 3, marketName: 'Next Fed Chair Appointment', category: 'Political', priceA: 0.20, priceB: 0.28, difference: '8.0%', liquidity: '$90k', risk: 'High' },
+  { 
+    id: 1, 
+    marketQuestion: 'AI Regulation Bill to Pass in 2025?', 
+    marketOdds: 75, 
+    polynadoFairOdds: 60, 
+    edgeTrend24h: -10,
+    edgeData: [65, 62, 60, 58, 55, 52, 50] // downward trend
+  },
+  { 
+    id: 2, 
+    marketQuestion: 'Messi to Return to Barcelona?', 
+    marketOdds: 60, 
+    polynadoFairOdds: 64, 
+    edgeTrend24h: 20,
+    edgeData: [44, 48, 52, 56, 60, 62, 64] // upward trend
+  },
+  { 
+    id: 3, 
+    marketQuestion: 'Bitcoin to reach $100K by EOY 2025?', 
+    marketOdds: 66, 
+    polynadoFairOdds: 74, 
+    edgeTrend24h: -20,
+    edgeData: [94, 90, 86, 82, 78, 76, 74] // downward trend
+  },
 ];
 
 const DashboardPageContent: React.FC = () => {

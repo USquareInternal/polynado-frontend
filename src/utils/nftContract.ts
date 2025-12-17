@@ -364,8 +364,13 @@ export const useJoinPolynado = () => {
   const contractAddress = getContractAddress();
 
   const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess, data: receipt } = useWaitForTransactionReceipt({
     hash,
+    query: {
+      enabled: !!hash,
+      retry: 3,
+      retryDelay: 2000,
+    },
   });
 
   const joinPolynado = async (userId: string, referrerId: string, email: string) => {

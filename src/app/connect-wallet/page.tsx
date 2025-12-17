@@ -47,7 +47,7 @@ const ConnectWalletPage: React.FC = () => {
       localStorage.removeItem('isNewUser');
       // Redirect to dashboard after a short delay
       setTimeout(() => {
-        router.push('/');
+        router.push('/login');
       }, 1500);
     }
   }, [isSuccess, hash, router, transactionTimeout]);

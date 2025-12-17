@@ -38,12 +38,15 @@ const ERC20_ABI = [
 const getContractAddress = (): `0x${string}` | undefined => {
   const address = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS;
   
+  console.log('[getContractAddress] Environment variable:', address);
+  
   if (!address || address === '0x0000000000000000000000000000000000000000') {
     if (typeof window !== 'undefined') {
-      console.warn('NFT Contract Address not set in NEXT_PUBLIC_NFT_CONTRACT_ADDRESS');
+      console.warn('[getContractAddress] NFT Contract Address not set in NEXT_PUBLIC_NFT_CONTRACT_ADDRESS');
     }
     return undefined;
   }
+  console.log('[getContractAddress] Returning address:', address);
   return address as `0x${string}`;
 };
 
@@ -394,6 +397,196 @@ export const useJoinPolynado = () => {
     isSuccess,
     error,
     reset,
+  };
+};
+
+/**
+ * Hook to read subscription prices from contract
+ */
+export const useSubscriptionPrices = () => {
+  const contractAddress = getContractAddress();
+
+  console.log('[useSubscriptionPrices] Contract Address:', contractAddress);
+  console.log('[useSubscriptionPrices] Contract Address exists:', !!contractAddress);
+
+  const { data: standardPrice, isLoading: isLoadingStandard, error: standardError, refetch: refetchStandard } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'standardSubscriptionPrice',
+    query: { enabled: !!contractAddress },
+  });
+
+  const { data: proPrice, isLoading: isLoadingPro, error: proError, refetch: refetchPro } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'proSubscriptionPrice',
+    query: { enabled: !!contractAddress },
+  });
+
+  // Debug logging
+  console.log('[useSubscriptionPrices] Standard Price Data:', {
+    raw: standardPrice,
+    string: standardPrice?.toString(),
+    isLoading: isLoadingStandard,
+    error: standardError,
+  });
+
+  console.log('[useSubscriptionPrices] Pro Price Data:', {
+    raw: proPrice,
+    string: proPrice?.toString(),
+    isLoading: isLoadingPro,
+    error: proError,
+  });
+
+  return {
+    standardPrice: standardPrice as bigint | undefined,
+    proPrice: proPrice as bigint | undefined,
+    isLoading: isLoadingStandard || isLoadingPro,
+    error: standardError || proError,
+    refetch: () => {
+      refetchStandard?.();
+      refetchPro?.();
+    },
+  };
+};
+
+/**
+ * Hook to buy standard subscription via buyStandardSubscription(userId)
+ */
+export const useBuyStandardSubscription = () => {
+  const contractAddress = getContractAddress();
+
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const buyStandardSubscription = async (userId: string) => {
+    if (!contractAddress) {
+      throw new Error('NFT contract address not set');
+    }
+
+    writeContract({
+      address: contractAddress,
+      abi: NFTmintABI,
+      functionName: 'buyStandardSubscription',
+      args: [userId],
+    });
+  };
+
+  return {
+    buyStandardSubscription,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+};
+
+/**
+ * Hook to buy pro subscription via buyProSubscription(userId)
+ */
+export const useBuyProSubscription = () => {
+  const contractAddress = getContractAddress();
+
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const buyProSubscription = async (userId: string) => {
+    if (!contractAddress) {
+      throw new Error('NFT contract address not set');
+    }
+
+    writeContract({
+      address: contractAddress,
+      abi: NFTmintABI,
+      functionName: 'buyProSubscription',
+      args: [userId],
+    });
+  };
+
+  return {
+    buyProSubscription,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+};
+
+/**
+ * Hook to get subscription info for a user
+ */
+export const useSubscriptionInfo = (userId?: string) => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'getSubscriptionInfo',
+    args: userId ? [userId] : undefined,
+    query: {
+      enabled: !!contractAddress && !!userId,
+    },
+  });
+
+  const tuple = data as
+    | {
+        0?: number;
+        1?: bigint;
+        2?: bigint;
+        3?: boolean;
+        subType?: number;
+        expiryTimestamp?: bigint;
+        remainingTime?: bigint;
+        isActive?: boolean;
+      }
+    | undefined;
+
+  const subscriptionInfo = tuple
+    ? {
+        subType: tuple.subType ?? tuple[0] ?? 0, // 0 = None, 1 = Standard, 2 = Pro
+        expiryTimestamp: tuple.expiryTimestamp ?? tuple[1],
+        remainingTime: tuple.remainingTime ?? tuple[2],
+        isActive: tuple.isActive ?? tuple[3] ?? false,
+      }
+    : undefined;
+
+  return {
+    subscriptionInfo,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook to get userId by wallet address
+ */
+export const useUserIdByWallet = (walletAddress?: `0x${string}`) => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'walletToUserId',
+    args: walletAddress ? [walletAddress] : undefined,
+    query: {
+      enabled: !!contractAddress && !!walletAddress,
+    },
+  });
+
+  return {
+    userId: data as string | undefined,
+    isLoading,
+    error,
+    refetch,
   };
 };
 

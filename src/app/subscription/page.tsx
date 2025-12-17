@@ -1,10 +1,409 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAccount, useReadContract } from 'wagmi';
 import { MainLayout } from '@/components/layouts/MainLayout';
-import { CheckOutlined, CrownOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { CheckOutlined, CrownOutlined, ThunderboltOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { getUserData } from '@/services/authService';
+import { useSubscriptionPrices, useBuyStandardSubscription, useBuyProSubscription, useUSDTMeta, useApproveUSDT, getNFTContractAddress, useSubscriptionInfo, useUserIdByWallet } from '@/utils/nftContract';
+import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
 
 const SubscriptionPage: React.FC = () => {
+  const router = useRouter();
+  const { isConnected, address } = useAccount();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [subscriptionStep, setSubscriptionStep] = useState<'idle' | 'approving' | 'buying' | 'success' | 'error'>('idle');
+  const [pendingSubscriptionType, setPendingSubscriptionType] = useState<'standard' | 'pro' | null>(null);
+  const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  
+  // Get subscription prices from contract
+  const { standardPrice, proPrice, isLoading: isLoadingPrices, error: pricesError } = useSubscriptionPrices();
+  const { usdtAddress, usdtDecimals, isLoading: isLoadingUsdtMeta, error: usdtError } = useUSDTMeta();
+  
+  // Get subscription info for logged-in user
+  const { subscriptionInfo, isLoading: isLoadingSubscriptionInfo, refetch: refetchSubscriptionInfo } = useSubscriptionInfo(userId || undefined);
+  
+  // Check wallet to userId mapping
+  const { userId: walletUserId, isLoading: isLoadingWalletMapping } = useUserIdByWallet(address);
+  
+  // Check if subscription is active
+  const isSubscriptionActive = subscriptionInfo?.isActive ?? false;
+  const activeSubscriptionType = subscriptionInfo?.subType ?? 0;
+  
+  // Get contract addresses
+  const nftContractAddress = getNFTContractAddress();
+  const usdtEnvAddress = process.env.NEXT_PUBLIC_USDT_ADDRESS as `0x${string}` | undefined;
+  const resolvedUsdtAddress = (usdtEnvAddress || usdtAddress) as `0x${string}` | undefined;
+  
+  // Check USDT allowance
+  const { data: allowance } = useReadContract({
+    address: resolvedUsdtAddress,
+    abi: [
+      {
+        inputs: [
+          { name: 'owner', type: 'address' },
+          { name: 'spender', type: 'address' },
+        ],
+        name: 'allowance',
+        outputs: [{ name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+      },
+    ],
+    functionName: 'allowance',
+    args: address && nftContractAddress ? [address, nftContractAddress] : undefined,
+    query: {
+      enabled: !!address && !!resolvedUsdtAddress && !!nftContractAddress,
+    },
+  });
+  
+  // Approve USDT hook
+  const { approveUSDT, isPending: isApproving, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useApproveUSDT(resolvedUsdtAddress, nftContractAddress);
+
+  // Format price function - USDT uses 6 decimals
+  const formatPrice = (raw?: bigint): string => {
+    console.log('[formatPrice] Input:', { raw, rawString: raw?.toString() });
+    if (raw === undefined || raw === null) {
+      console.log('[formatPrice] Returning Loading...');
+      return 'Loading...';
+    }
+    
+    // USDT uses 6 decimals
+    const decimals = 6;
+    const divisor = BigInt(10 ** decimals);
+    const whole = raw / divisor;
+    const remainder = raw % divisor;
+    
+    console.log('[formatPrice] Calculation:', { 
+      divisor: divisor.toString(), 
+      whole: whole.toString(), 
+      remainder: remainder.toString() 
+    });
+    
+    // Handle remainder
+    if (remainder === BigInt(0)) {
+      // No decimal part
+      const numValue = Number(whole);
+      const formatted = `$${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/m`;
+      console.log('[formatPrice] Result (no decimals):', formatted);
+      return formatted;
+    } else {
+      // Convert remainder to decimal string
+      const remainderStr = remainder.toString().padStart(decimals, '0');
+      const trimmedRemainder = remainderStr.replace(/0+$/, '');
+      
+      // Combine whole and decimal parts
+      const decimalValue = parseFloat(`0.${trimmedRemainder}`);
+      const totalValue = Number(whole) + decimalValue;
+      
+      const formatted = `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}/m`;
+      console.log('[formatPrice] Result (with decimals):', formatted);
+      return formatted;
+    }
+  };
+
+  const formattedStandardPrice = formatPrice(standardPrice);
+  const formattedProPrice = formatPrice(proPrice);
+
+  // Debug logging for subscription data
+  useEffect(() => {
+    console.log('=== SUBSCRIPTION PAGE DEBUG ===');
+    console.log('User ID:', userId);
+    console.log('Is Connected:', isConnected);
+    console.log('Standard Price:', {
+      raw: standardPrice,
+      string: standardPrice?.toString(),
+      isLoading: isLoadingPrices,
+      error: pricesError,
+    });
+    console.log('Pro Price:', {
+      raw: proPrice,
+      string: proPrice?.toString(),
+      isLoading: isLoadingPrices,
+      error: pricesError,
+    });
+    console.log('USDT Meta:', {
+      address: usdtAddress,
+      decimals: usdtDecimals,
+      isLoading: isLoadingUsdtMeta,
+      error: usdtError,
+    });
+    console.log('Formatted Standard Price:', formattedStandardPrice);
+    console.log('Formatted Pro Price:', formattedProPrice);
+    console.log('================================');
+  }, [userId, isConnected, standardPrice, proPrice, isLoadingPrices, pricesError, usdtAddress, usdtDecimals, isLoadingUsdtMeta, usdtError, formattedStandardPrice, formattedProPrice]);
+  
+  // Subscription purchase hooks
+  const { 
+    buyStandardSubscription, 
+    isPending: isStandardPending, 
+    isConfirming: isStandardConfirming,
+    isSuccess: isStandardSuccess,
+    error: standardError,
+    reset: resetStandard 
+  } = useBuyStandardSubscription();
+  
+  const { 
+    buyProSubscription, 
+    isPending: isProPending, 
+    isConfirming: isProConfirming,
+    isSuccess: isProSuccess,
+    error: proError,
+    reset: resetPro 
+  } = useBuyProSubscription();
+  
+  const isBuying = isStandardPending || isStandardConfirming || isProPending || isProConfirming;
+
+  // Get user ID from localStorage
+  useEffect(() => {
+    const userData = getUserData();
+    console.log('[Subscription Page] User Data from localStorage:', userData);
+    if (userData) {
+      // Use _id or reffralId as userId
+      const id = (userData as any)._id || (userData as any).reffralId;
+      console.log('[Subscription Page] Extracted User ID:', id);
+      if (id) {
+        setUserId(id);
+      } else {
+        console.warn('[Subscription Page] No user ID found in userData');
+      }
+    } else {
+      console.warn('[Subscription Page] No user data found in localStorage');
+    }
+  }, []);
+
+  // Check wallet address mapping and validate
+  useEffect(() => {
+    if (isConnected && address && userId && walletUserId && !isLoadingWalletMapping) {
+      console.log('[Subscription Page] Wallet Mapping Check:', {
+        loggedInUserId: userId,
+        walletUserId: walletUserId,
+        walletAddress: address,
+      });
+      
+      if (walletUserId !== userId && walletUserId !== '') {
+        showErrorToast('Wallet address does not match your account. Please connect the correct wallet address.');
+      }
+    }
+  }, [isConnected, address, userId, walletUserId, isLoadingWalletMapping]);
+
+  // Update remaining time countdown
+  useEffect(() => {
+    if (subscriptionInfo?.isActive && subscriptionInfo.remainingTime) {
+      const remainingSeconds = Number(subscriptionInfo.remainingTime);
+      setRemainingTime(remainingSeconds);
+      
+      // Update countdown every second
+      const interval = setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev === null || prev <= 0) {
+            clearInterval(interval);
+            refetchSubscriptionInfo();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      setRemainingTime(null);
+    }
+  }, [subscriptionInfo, refetchSubscriptionInfo]);
+
+  // Format remaining time
+  const formatRemainingTime = (seconds: number): string => {
+    if (seconds <= 0) return 'Expired';
+    
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
+  // Get subscription type name
+  const getSubscriptionTypeName = (subType: number): string => {
+    if (subType === 1) return 'Standard';
+    if (subType === 2) return 'Pro';
+    return 'None';
+  };
+
+  // Handle subscription purchase after approval
+  const handleBuyAfterApprove = async (subscriptionType: 'standard' | 'pro') => {
+    if (!userId) {
+      showErrorToast('User ID not found. Please login again.');
+      router.push('/login');
+      return;
+    }
+
+    try {
+      setSubscriptionStep('buying');
+      if (subscriptionType === 'standard') {
+        await buyStandardSubscription(userId);
+      } else {
+        await buyProSubscription(userId);
+      }
+    } catch (error: any) {
+      setSubscriptionStep('error');
+      showErrorToast(error.message || `Failed to purchase ${subscriptionType} subscription`);
+    }
+  };
+
+  // Handle subscription purchase (with approval check)
+  const handleStandardSubscription = async () => {
+    if (!isConnected || !address) {
+      showWarningToast('Please connect your wallet first');
+      router.push('/connect-wallet');
+      return;
+    }
+
+    if (!userId) {
+      showErrorToast('User ID not found. Please login again.');
+      router.push('/login');
+      return;
+    }
+
+    if (!standardPrice) {
+      showErrorToast('Standard subscription price not available');
+      return;
+    }
+
+    try {
+      setPendingSubscriptionType('standard');
+      setSubscriptionStep('approving');
+
+      // Check if we need to approve (allowance is less than subscription price)
+      const needsApproval = !allowance || allowance < standardPrice;
+
+      if (needsApproval) {
+        // Approve USDT spending (approve slightly more than needed for gas efficiency)
+        const approveAmount = standardPrice * BigInt(2); // Approve 2x the amount
+        await approveUSDT(approveAmount);
+      } else {
+        // Already approved, proceed directly to buy
+        setSubscriptionStep('buying');
+        await handleBuyAfterApprove('standard');
+      }
+    } catch (error: any) {
+      setSubscriptionStep('error');
+      showErrorToast(error.message || 'Failed to purchase standard subscription');
+    }
+  };
+
+  const handleProSubscription = async () => {
+    if (!isConnected || !address) {
+      showWarningToast('Please connect your wallet first');
+      router.push('/connect-wallet');
+      return;
+    }
+
+    if (!userId) {
+      showErrorToast('User ID not found. Please login again.');
+      router.push('/login');
+      return;
+    }
+
+    if (!proPrice) {
+      showErrorToast('Pro subscription price not available');
+      return;
+    }
+
+    try {
+      setPendingSubscriptionType('pro');
+      setSubscriptionStep('approving');
+
+      // Check if we need to approve (allowance is less than subscription price)
+      const needsApproval = !allowance || allowance < proPrice;
+
+      if (needsApproval) {
+        // Approve USDT spending (approve slightly more than needed for gas efficiency)
+        const approveAmount = proPrice * BigInt(2); // Approve 2x the amount
+        await approveUSDT(approveAmount);
+      } else {
+        // Already approved, proceed directly to buy
+        setSubscriptionStep('buying');
+        await handleBuyAfterApprove('pro');
+      }
+    } catch (error: any) {
+      setSubscriptionStep('error');
+      showErrorToast(error.message || 'Failed to purchase pro subscription');
+    }
+  };
+
+  // Handle approve success - proceed to buy subscription
+  useEffect(() => {
+    if (isApproveSuccess && subscriptionStep === 'approving' && pendingSubscriptionType) {
+      setSubscriptionStep('buying');
+      handleBuyAfterApprove(pendingSubscriptionType);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isApproveSuccess, subscriptionStep, pendingSubscriptionType]);
+
+  // Handle subscription purchase success
+  useEffect(() => {
+    const succeeded = (isStandardSuccess || isProSuccess) && subscriptionStep === 'buying';
+    if (succeeded) {
+      setSubscriptionStep('success');
+      const subscriptionType = isStandardSuccess ? 'Standard' : 'Pro';
+      showSuccessToast(`${subscriptionType} subscription purchased successfully!`);
+      resetStandard();
+      resetPro();
+      resetApprove();
+      setPendingSubscriptionType(null);
+      setSubscriptionStep('idle');
+      // Refetch subscription info to update UI
+      refetchSubscriptionInfo();
+    }
+  }, [isStandardSuccess, isProSuccess, subscriptionStep, resetStandard, resetPro, resetApprove, refetchSubscriptionInfo]);
+
+  // Handle errors
+  useEffect(() => {
+    if (approveError && subscriptionStep === 'approving') {
+      setSubscriptionStep('error');
+      showErrorToast(approveError.message || 'USDT approval failed');
+      resetApprove();
+      setPendingSubscriptionType(null);
+    }
+  }, [approveError, subscriptionStep, resetApprove]);
+
+  useEffect(() => {
+    if (standardError && subscriptionStep === 'buying' && pendingSubscriptionType === 'standard') {
+      setSubscriptionStep('error');
+      showErrorToast(standardError.message || 'Failed to purchase standard subscription');
+      resetStandard();
+      setPendingSubscriptionType(null);
+    }
+  }, [standardError, subscriptionStep, pendingSubscriptionType, resetStandard]);
+
+  useEffect(() => {
+    if (proError && subscriptionStep === 'buying' && pendingSubscriptionType === 'pro') {
+      setSubscriptionStep('error');
+      showErrorToast(proError.message || 'Failed to purchase pro subscription');
+      resetPro();
+      setPendingSubscriptionType(null);
+    }
+  }, [proError, subscriptionStep, pendingSubscriptionType, resetPro]);
+
+  const isStandardProcessing = (subscriptionStep === 'approving' || subscriptionStep === 'buying') && pendingSubscriptionType === 'standard' && (isApproving || isBuying);
+  const isProProcessing = (subscriptionStep === 'approving' || subscriptionStep === 'buying') && pendingSubscriptionType === 'pro' && (isApproving || isBuying);
+  
+  // Disable buttons if subscription is active
+  const isStandardDisabled = Boolean(isStandardProcessing || !userId || !isConnected || isSubscriptionActive || isLoadingSubscriptionInfo);
+  const isProDisabled = Boolean(isProProcessing || !userId || !isConnected || isSubscriptionActive || isLoadingSubscriptionInfo);
+  
+  // Check if wallet mapping is incorrect
+  const isWalletMismatch = Boolean(isConnected && address && userId && walletUserId && walletUserId !== userId && walletUserId !== '');
   return (
     <MainLayout>
       <style dangerouslySetInnerHTML={{__html: `
@@ -132,8 +531,22 @@ const SubscriptionPage: React.FC = () => {
                 <div className="mb-6">
                   <h3 className="text-2xl font-bold text-white mb-2">Standard Subscription</h3>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-orange-400">$20/m</span>
+                    <span className="text-4xl font-bold text-orange-400">
+                      {isLoadingPrices ? 'Loading...' : formattedStandardPrice}
+                    </span>
                   </div>
+                  {/* Show remaining time if Standard subscription is active */}
+                  {isSubscriptionActive && activeSubscriptionType === 1 && remainingTime !== null && (
+                    <div className="mt-3 p-3 rounded-lg border border-green-500/30 bg-green-500/10">
+                      <div className="flex items-center gap-2">
+                        <CheckCircleOutlined className="text-green-400 text-sm" />
+                        <span className="text-green-400 text-sm font-semibold">Active</span>
+                      </div>
+                      <p className="text-white text-xs mt-1">
+                        Remaining: <span className="font-bold text-green-400">{formatRemainingTime(remainingTime)}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <ul className="flex-1 space-y-3 mb-6">
@@ -152,13 +565,15 @@ const SubscriptionPage: React.FC = () => {
                 </ul>
 
                 <button
-                  className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg"
+                  onClick={handleStandardSubscription}
+                  disabled={Boolean(isStandardDisabled || isWalletMismatch)}
+                  className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
                     boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
                   }}
                 >
-                  Choose Standard
+                  {isStandardProcessing ? 'Processing...' : isSubscriptionActive ? 'Subscription Active' : 'Choose Standard'}
                 </button>
               </div>
             </div>
@@ -190,8 +605,22 @@ const SubscriptionPage: React.FC = () => {
                 <div className="mb-6">
                   <h3 className="text-2xl font-bold text-white mb-2">Pro Subscription</h3>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-orange-400">$100/m</span>
+                    <span className="text-4xl font-bold text-orange-400">
+                      {isLoadingPrices ? 'Loading...' : formattedProPrice}
+                    </span>
                   </div>
+                  {/* Show remaining time if Pro subscription is active */}
+                  {isSubscriptionActive && activeSubscriptionType === 2 && remainingTime !== null && (
+                    <div className="mt-3 p-3 rounded-lg border border-green-500/30 bg-green-500/10">
+                      <div className="flex items-center gap-2">
+                        <CheckCircleOutlined className="text-green-400 text-sm" />
+                        <span className="text-green-400 text-sm font-semibold">Active</span>
+                      </div>
+                      <p className="text-white text-xs mt-1">
+                        Remaining: <span className="font-bold text-green-400">{formatRemainingTime(remainingTime)}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <ul className="flex-1 space-y-3 mb-6">
@@ -218,13 +647,15 @@ const SubscriptionPage: React.FC = () => {
                 </ul>
 
                 <button
-                  className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg"
+                  onClick={handleProSubscription}
+                  disabled={Boolean(isProDisabled || isWalletMismatch)}
+                  className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
                     boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
                   }}
                 >
-                  Go Pro
+                  {isProProcessing ? 'Processing...' : isSubscriptionActive ? 'Subscription Active' : 'Go Pro'}
                 </button>
               </div>
             </div>

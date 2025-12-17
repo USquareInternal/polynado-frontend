@@ -176,7 +176,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
         Referral Dashboard
       </Heading>
       <p className="text-sm text-gray-400 mb-6">
-        Share Polynado and earn rewards for every successful referral.
+      Share Polynado and earn rewards
       </p>
 
       {/* Stats Cards (Always Visible) */}

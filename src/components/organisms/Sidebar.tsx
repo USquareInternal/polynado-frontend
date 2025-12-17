@@ -1,7 +1,7 @@
 // src/components/organisms/Sidebar.tsx
 'use client';
 import React from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import NavLink from '../molecules/NavLink';
 import {
     LineChartOutlined,
@@ -13,6 +13,7 @@ import {
     TeamOutlined,
     CrownOutlined,
     RobotOutlined,
+    WalletOutlined,
 } from '@ant-design/icons';
 
 
@@ -29,12 +30,13 @@ const navItems = [
     { name: 'Referral', href: '/referral', icon: TeamOutlined },
     { name: 'Subscription', href: '/subscription', icon: CrownOutlined },
     { name: 'AI Chatbot', href: '/polynado-chatbot', icon: RobotOutlined },
+    { name: 'Withdrawal History', href: '/withdraw-history', icon: WalletOutlined },
 ];
 
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const pathname = usePathname();
-
+    const router = useRouter();
     // Define the narrow desktop width
     const desktopWidthClass = 'lg:w-20'; // 80px
 
@@ -67,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {/* 2. Logo Container */}
                 <div className={logoContainerClasses}>
 
-                    <span className="flex items-center mt-8  h-full mb-8 pt-5 lg:flex lg:justify-center">
+                    <span className="flex items-center mt-8  h-full mb-8 pt-5 lg:flex lg:justify-center" onClick={() => router.push('/')}>
                         <img
                             src='/image 7.svg'
                             alt="Logo"

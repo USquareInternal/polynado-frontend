@@ -33,6 +33,16 @@ interface ReferredUsersResponse {
   data: ReferredUser[];
 }
 
+interface ReferralStatsResponse {
+  referredUsers: ReferredUser[];
+  referredUsersStats: {
+    totalNumber: number;
+    totalAmount: number | string;
+    totalNFTMintUsers: number;
+    totalSubscriptionUsers: number;
+  };
+}
+
 // Table Event Type
 interface ReferralEvent {
   id: string;
@@ -47,6 +57,12 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
   const [referralEvents, setReferralEvents] = useState<ReferralEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [referralLink, setReferralLink] = useState('');
+  const [stats, setStats] = useState([
+    { value: 0, label: 'Total Referred Users', iconType: 'users' as const },
+    { value: 0, label: 'Total Mints from Referrals', iconType: 'mints' as const },
+    { value: 0, label: 'Total Subscriptions', iconType: 'subscriptions' as const },
+    { value: '0 USDT', label: 'Total Rewards Earned', iconType: 'rewards' as const },
+  ]);
   
   // Get userId from userData for referral link
   useEffect(() => {
@@ -59,13 +75,6 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
       setReferralLink('');
     }
   }, []);
-
-  const stats = [
-    { value: 12, label: 'Total Referred Users', iconType: 'users' as const },
-    { value: 8, label: 'Total Mints from Referrals', iconType: 'mints' as const },
-    { value: 4, label: 'Total Subscriptions', iconType: 'subscriptions' as const },
-    { value: '240 USDT', label: 'Total Rewards Earned', iconType: 'rewards' as const },
-  ];
 
   const rewardCards = [
     {
@@ -123,7 +132,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
     return amount > BigInt(0) ? 'Paid' : 'Pending';
   };
 
-  // Fetch referred users from API
+  // Fetch referred users and stats from API
   useEffect(() => {
     const fetchReferredUsers = async () => {
       try {
@@ -148,11 +157,25 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
           throw new Error(`Failed to fetch referred users: ${response.statusText}`);
         }
 
-        const data: ReferredUsersResponse = await response.json();
+        const data: ReferralStatsResponse = await response.json();
 
-        if (data.success && data.data) {
+        // Update stats from API response
+        if (data.referredUsersStats) {
+          const statsData = data.referredUsersStats;
+          const formattedTotalAmount = formatRewardAmount(statsData.totalAmount);
+          
+          setStats([
+            { value: statsData.totalNumber, label: 'Total Referred Users', iconType: 'users' as const },
+            { value: statsData.totalNFTMintUsers, label: 'Total Mints from Referrals', iconType: 'mints' as const },
+            { value: statsData.totalSubscriptionUsers, label: 'Total Subscriptions', iconType: 'subscriptions' as const },
+            { value: formattedTotalAmount, label: 'Total Rewards Earned', iconType: 'rewards' as const },
+          ]);
+        }
+
+        // Update referral events from referredUsers array
+        if (data.referredUsers && Array.isArray(data.referredUsers)) {
           // Sort by date (newest first) - sort by createdAt before mapping
-          const sortedData = [...data.data].sort((a, b) => 
+          const sortedData = [...data.referredUsers].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           
@@ -166,6 +189,8 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
           }));
           
           setReferralEvents(events);
+        } else {
+          setReferralEvents([]);
         }
       } catch (error) {
         console.error('Error fetching referred users:', error);

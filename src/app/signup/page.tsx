@@ -681,7 +681,7 @@ const SignupPage: React.FC = () => {
 
     // Extract parameters
     const userId = (userData as any).userId;
-    const referrerId = (userData as any).refferedBy  || '';
+    const referrerId = (userData as any).referredBy  || '';
     const email = userData.email;
 
     if (!userId || !email) {

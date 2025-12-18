@@ -389,7 +389,17 @@ const NFTMintDashboard: React.FC = () => {
   };
 
   return (
-    <div className=" mx-auto px-4 py-8">
+    <div className="mx-auto px-4 py-8">
+      {/* Header Section */}
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+          Mint Your Polynado NFT
+        </h1>
+        <p className="text-base sm:text-lg text-gray-400 ">
+          Unlock permanent Pro access to Polynado's market intelligence platform. Choose between Standard or Pro tier NFTs to gain lifetime access to advanced analytics, AI-powered insights, and exclusive features.
+        </p>
+      </div>
+
       {/* NFT Tiers Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-8">
         {/* STANDARD TIER */}

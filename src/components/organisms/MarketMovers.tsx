@@ -6,13 +6,9 @@ import { MarketActivityChart } from '@/components/atoms/MarketActivityChart';
 import { TrendBadge } from '@/components/molecules/TrendBadge';
 import { Button } from '@/components/atoms/Button';
 
-// Mock data for demonstration
+// Mock data for demonstration - Limited to 5-6 trending topics
 const mockTrends = [
-    "Politics", "Box Office", "Mentions", "Elections", "Earnings", "Health",
-    "Culture Business", "World Economy", "Weather", "Crypto", "Technology",
-    "Geopolitics", "Finance", "Sports", "Politics", "Box Office", "Mentions", "Elections", "Earnings", "Health",
-    "Culture Business", "World Economy", "Weather", "Crypto", "Technology",
-    "Geopolitics", "Finance", "Sports"
+    "Politics", "Box Office", "Elections", "Crypto", "Technology", "Finance"
 ];
 
 // Match compact pills shown in reference: subtle border, muted text, tight desktop padding.
@@ -142,12 +138,12 @@ export const MarketMovers: React.FC = () => {
                         What's Trending ?
                     </Heading>
 
-                    <div className="grid grid-cols-3 gap-2 flex-grow">
+                    <div className="grid grid-cols-3 gap-2">
                         {mockTrends.map((trend, index) => (
                             <TrendBadge
                                 key={index}
                                 label={trend}
-                                className={trendBadgeCustomClasses} // Uses smallest padding for minimal size
+                                className={`${trendBadgeCustomClasses} w-full flex items-center justify-center text-center`}
                                 variant="default"
                             />
                         ))}

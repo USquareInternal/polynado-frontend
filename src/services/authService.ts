@@ -5,15 +5,15 @@ const API_BASE_URL = 'https://polynado-backend.onrender.com';
 export interface SignupRequest {
   email: string;
   password: string;
-  refferedBy?: string | null;
+  referredBy?: string | null;
 }
 
 export interface SignupResponse {
   message: string;
   success: boolean;
   user: {
-    reffralId: string;
-    refferedBy: string | null;
+    userId: string;
+    referredBy: string | null;
     email: string;
     _id: string;
     createdAt: string;
@@ -103,7 +103,7 @@ export const signup = async (
       body: JSON.stringify({
         email: signupData.email,
         password: signupData.password,
-        refferedBy: signupData.refferedBy || null,
+        referredBy: signupData.referredBy || null,
       }),
     });
 

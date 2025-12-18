@@ -105,7 +105,7 @@ const SignupPage: React.FC = () => {
         const response = await signup({
           email: formData.email,
           password: formData.password,
-          refferedBy: formData.referralCode.trim() || null,
+          referredBy: formData.referralCode.trim() || null,
         });
 
         if (response.success) {

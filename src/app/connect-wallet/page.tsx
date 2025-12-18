@@ -181,7 +181,7 @@ const ConnectWalletPage: React.FC = () => {
     if (isNewUser) {
       // New user from signup - call joinPolynado
       const userId =(userData as any).userId;
-      const referrerId = (userData as any).refferedBy || '';
+      const referrerId = (userData as any).referredBy || '';
       const email = userData.email;
 
       if (!userId || !email) {

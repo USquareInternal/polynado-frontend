@@ -206,19 +206,19 @@ const LoginPage: React.FC = () => {
                     Password
                   </label>
                   <div className="relative">
-                    <input
-                      id="password"
+                  <input
+                    id="password"
                       type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                       className="w-full px-4 py-3 pr-12 rounded-lg bg-black/40 border border-gray-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all"
-                      placeholder="Enter your password"
-                      style={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                      }}
-                    />
+                    placeholder="Enter your password"
+                    style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                    }}
+                  />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}

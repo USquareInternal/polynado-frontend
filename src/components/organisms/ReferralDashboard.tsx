@@ -172,14 +172,14 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
         }
 
         const responseData: ReferralStatsResponse = await response.json();
-
+console.log("responseData",responseData);
         // Check if response is successful and has data
         if (!responseData.success || !responseData.data) {
           throw new Error('Invalid API response structure');
         }
 
         const data = responseData.data;
-
+console.log("data",data);
         // Update stats from API response
         if (data.referredUsersStats) {
           const statsData = data.referredUsersStats;
@@ -249,7 +249,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
               status: rewardStatus,
             };
           });
-          
+          console.log("events",events);
           setReferralEvents(events);
         } else {
           setReferralEvents([]);

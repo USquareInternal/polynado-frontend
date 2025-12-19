@@ -17,14 +17,22 @@ interface ReferralDashboardProps {
 // API Response Types
 interface ReferredUser {
   _id: string;
-  email: string;
+  userId: string;
+  userWallet: string;
+  collectionId?: number;
+  tokenId?: number;
+  price?: string;
+  priceInUsdt?: string;
+  nftType?: string;
+  referrerId: string;
+  referrerWallet?: string | null;
+  referralAmountInUsdt: string;
+  referralPercentage?: number;
+  blockNumber?: number;
+  transactionHash?: string;
   createdAt: string;
   updatedAt: string;
-  userId?: string;
-  reffralId?: string;
-  referralRewards: number | string;
-  referredBy?: string | null;
-  ReferredBy?: string | null;
+  __v?: number;
 }
 
 interface ReferredUsersResponse {
@@ -180,13 +188,31 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
           );
           
           // Map sorted data to events
-          const events: ReferralEvent[] = sortedData.map((user) => ({
-            id: user.userId || user.reffralId || 'N/A',
-            date: formatDate(user.createdAt),
-            type: 'User Registration', // API doesn't provide event type, defaulting to User Registration
-            reward: formatRewardAmount(user.referralRewards),
-            status: getRewardStatus(user.referralRewards),
-          }));
+          const events: ReferralEvent[] = sortedData.map((user) => {
+            // Determine event type based on nftType or collectionId
+            let eventType = 'User Registration';
+            if (user.nftType) {
+              eventType = `NFT Mint (${user.nftType})`;
+            } else if (user.collectionId) {
+              eventType = user.collectionId === 1 ? 'NFT Mint (Standard)' : user.collectionId === 2 ? 'NFT Mint (Pro)' : 'NFT Mint';
+            }
+            
+            // Format reward amount (already in USDT format from API)
+            const rewardAmount = user.referralAmountInUsdt 
+              ? `${parseFloat(user.referralAmountInUsdt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`
+              : '0 USDT';
+            
+            // Determine status based on referralAmountInUsdt
+            const rewardStatus = parseFloat(user.referralAmountInUsdt || '0') > 0 ? 'Paid' : 'Pending';
+            
+            return {
+              id: user.userWallet || user.userId || 'N/A',
+              date: formatDate(user.createdAt),
+              type: eventType,
+              reward: rewardAmount,
+              status: rewardStatus,
+            };
+          });
           
           setReferralEvents(events);
         } else {

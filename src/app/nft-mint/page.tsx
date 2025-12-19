@@ -44,8 +44,8 @@ const NFTMintDashboard: React.FC = () => {
   }, []);
 
   // Read contract data (per collection)
-  const { collection: standardCollection, isLoading: isLoadingStandardCollection } = useCollectionInfo(1);
-  const { collection: proCollection, isLoading: isLoadingProCollection } = useCollectionInfo(2);
+  const { collection: standardCollection, isLoading: isLoadingStandardCollection, error: standardCollectionError } = useCollectionInfo(1);
+  const { collection: proCollection, isLoading: isLoadingProCollection, error: proCollectionError } = useCollectionInfo(2);
   const { current: standardCurrent, max: standardMax, isLoading: isLoadingStandardSupply, refetch: refetchStandardSupply } = useCollectionSupply(1);
   const { current: proCurrent, max: proMax, isLoading: isLoadingProSupply, refetch: refetchProSupply } = useCollectionSupply(2);
   const { publicMintActive: publicMintActiveStandard, isLoading: isLoadingMintActiveStandard } = usePublicMintActive(1);
@@ -130,27 +130,49 @@ const NFTMintDashboard: React.FC = () => {
       standardMintPrice: standardMintPrice?.toString(),
       proMintPrice: proMintPrice?.toString(),
       usdtDecimals,
+      isLoadingStandardCollection,
+      isLoadingProCollection,
+      standardCollectionError,
+      proCollectionError,
     });
-  }, [standardCollection, proCollection, standardCurrent, standardMax, proCurrent, proMax, standardMintPrice, proMintPrice, usdtDecimals]);
+    
+    if (standardCollectionError) {
+      console.error('Error fetching standard collection:', standardCollectionError);
+    }
+    if (proCollectionError) {
+      console.error('Error fetching pro collection:', proCollectionError);
+    }
+  }, [standardCollection, proCollection, standardCurrent, standardMax, proCurrent, proMax, standardMintPrice, proMintPrice, usdtDecimals, isLoadingStandardCollection, isLoadingProCollection, standardCollectionError, proCollectionError]);
 
-
+  // Format price function - Price comes in Ether format (18 decimals), display as USDT
   const formatPrice = (raw?: bigint) => {
-    if (raw === undefined || raw === null) return 'N/A';
-    const decimals = usdtDecimals ?? 18;
+    console.log('[formatPrice] Input:', { raw, rawString: raw?.toString() });
+    if (raw === undefined || raw === null) {
+      console.log('[formatPrice] Returning N/A - raw is undefined or null');
+      return 'N/A';
+    }
+    
+    // Price comes in Ether format (18 decimals)
+    const decimals = 18;
     
     // Use bigint division for precision
     const divisor = BigInt(10 ** decimals);
     const whole = raw / divisor;
     const remainder = raw % divisor;
     
-    // Convert whole part to string
-    const wholeStr = whole.toString();
+    console.log('[formatPrice] Calculation:', { 
+      divisor: divisor.toString(), 
+      whole: whole.toString(), 
+      remainder: remainder.toString() 
+    });
     
     // Handle remainder
     if (remainder === BigInt(0)) {
       // No decimal part
       const numValue = Number(whole);
-      return `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT`;
+      const formatted = `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT`;
+      console.log('[formatPrice] Result (no decimals):', formatted);
+      return formatted;
     } else {
       // Convert remainder to decimal string
       const remainderStr = remainder.toString().padStart(decimals, '0');
@@ -160,7 +182,9 @@ const NFTMintDashboard: React.FC = () => {
       const decimalValue = parseFloat(`0.${trimmedRemainder}`);
       const totalValue = Number(whole) + decimalValue;
       
-      return `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
+      const formatted = `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
+      console.log('[formatPrice] Result (with decimals):', formatted);
+      return formatted;
     }
   };
   const formattedStandardPrice = formatPrice(standardMintPrice);
@@ -235,6 +259,51 @@ const NFTMintDashboard: React.FC = () => {
     mintingWindowOpenPro &&
     !isStatusLoading &&
     !hasProNFT; // Only disable if Pro NFT Minted (Standard NFT doesn't block Pro)
+
+  // Debug button states
+  useEffect(() => {
+    console.log('Button States Debug:', {
+      isConnected,
+      standardButtonEnabled,
+      proButtonEnabled,
+      standardMintPrice: standardMintPrice?.toString(),
+      proMintPrice: proMintPrice?.toString(),
+      whitelistBlockedStandard,
+      whitelistBlockedPro,
+      isStandardProcessing,
+      isProProcessing,
+      mintingWindowOpenStandard,
+      mintingWindowOpenPro,
+      isStatusLoading,
+      hasStandardNFT,
+      hasProNFT,
+      publicMintActiveStandard,
+      publicMintActivePro,
+      whitelistMintActiveStandard,
+      whitelistMintActivePro,
+      isWhitelisted,
+    });
+  }, [
+    isConnected,
+    standardButtonEnabled,
+    proButtonEnabled,
+    standardMintPrice,
+    proMintPrice,
+    whitelistBlockedStandard,
+    whitelistBlockedPro,
+    isStandardProcessing,
+    isProProcessing,
+    mintingWindowOpenStandard,
+    mintingWindowOpenPro,
+    isStatusLoading,
+    hasStandardNFT,
+    hasProNFT,
+    publicMintActiveStandard,
+    publicMintActivePro,
+    whitelistMintActiveStandard,
+    whitelistMintActivePro,
+    isWhitelisted,
+  ]);
 
   // Handle approve success - proceed to mint
   useEffect(() => {

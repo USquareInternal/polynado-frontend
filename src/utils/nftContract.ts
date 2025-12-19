@@ -161,7 +161,7 @@ export const useCollectionInfo = (collectionId: number | bigint | undefined) => 
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
     abi: NFTmintABI,
-    functionName: 'getCollectionInfo',
+    functionName: 'collections',
     args: collectionId !== undefined ? [BigInt(collectionId)] : undefined,
     query: {
       enabled: !!contractAddress && collectionId !== undefined,

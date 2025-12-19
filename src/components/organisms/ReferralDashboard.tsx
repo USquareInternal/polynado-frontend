@@ -262,7 +262,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
               const rewardStatus = amountValue > 0 ? 'Paid' : 'Pending';
               
               const event = {
-                id: user.userWallet || user.userId || 'N/A',
+                id:  user.userId || 'N/A',
                 date: formatDate(user.createdAt),
                 type: eventType,
                 reward: rewardAmount,
@@ -275,7 +275,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
               console.error(`Error processing user ${index}:`, error, user);
               // Return a fallback event instead of breaking the entire mapping
               return {
-                id: user.userWallet || user.userId || 'N/A',
+                id:  user.userId || 'N/A',
                 date: user.createdAt ? formatDate(user.createdAt) : 'N/A',
                 type: 'Unknown',
                 reward: '0 USDT',
@@ -357,7 +357,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
                       backdropFilter: 'blur(2px)',
                     }}
                   >
-                    <th className="px-4 py-3 text-left font-semibold">Referee ID/Wallet</th>
+                    <th className="px-4 py-3 text-left font-semibold">Referee ID</th>
                     <th className="px-4 py-3 text-left font-semibold">Date Of Event</th>
                     <th className="px-4 py-3 text-left font-semibold">Event Type</th>
                     <th className="px-4 py-3 text-left font-semibold">Reward Amount</th>

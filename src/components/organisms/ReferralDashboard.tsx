@@ -459,7 +459,12 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
                   position: 'relative',
                 }}
               >
-                350 USDT Request Payout
+                {(() => {
+                  const totalRewardsStat = stats.find(stat => stat.label === 'Total Rewards Earned');
+                  const rewardValue = totalRewardsStat?.value || '0 USDT';
+                  const displayValue = typeof rewardValue === 'string' ? rewardValue : `${rewardValue} USDT`;
+                  return `${displayValue} Request Payout`;
+                })()}
               </button>
             </div>
             <p

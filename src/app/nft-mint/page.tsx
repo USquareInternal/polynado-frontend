@@ -59,9 +59,17 @@ const NFTMintDashboard: React.FC = () => {
   // Get user info to check which NFTs they've minted
   const { userInfo, isLoading: isLoadingUserInfo, refetch: refetchUserInfo } = useUserInfo(userId || undefined);
   
-  // Check which NFTs user has minted
-  const hasStandardNFT = userInfo?.collectionIds?.some(id => Number(id) === 1) ?? false;
-  const hasProNFT = userInfo?.collectionIds?.some(id => Number(id) === 2) ?? false;
+  // Check which NFTs user has minted from mintedColls (mapped to collectionIds)
+  // Handle both bigint and number types
+  const hasStandardNFT = userInfo?.collectionIds?.some(id => {
+    const numId = typeof id === 'bigint' ? Number(id) : Number(id);
+    return numId === 1;
+  }) ?? false;
+  const hasProNFT = userInfo?.collectionIds?.some(id => {
+    const numId = typeof id === 'bigint' ? Number(id) : Number(id);
+    return numId === 2;
+  }) ?? false;
+
 
   // Check USDT allowance
   const nftContractAddress = getNFTContractAddress();
@@ -118,37 +126,22 @@ const NFTMintDashboard: React.FC = () => {
     isLoadingWhitelistActivePro ||
     isLoadingWhitelistStatus ||
     isLoadingBalance ||
+    isLoadingUserInfo ||
     (!usdtEnvAddress && isLoadingUsdtMeta);
 
-  // Debug logging
+  // Error logging for collection data
   useEffect(() => {
-    console.log('Collection data', {
-      standardCollection,
-      proCollection,
-      standardSupply: { current: standardCurrent, max: standardMax },
-      proSupply: { current: proCurrent, max: proMax },
-      standardMintPrice: standardMintPrice?.toString(),
-      proMintPrice: proMintPrice?.toString(),
-      usdtDecimals,
-      isLoadingStandardCollection,
-      isLoadingProCollection,
-      standardCollectionError,
-      proCollectionError,
-    });
-    
     if (standardCollectionError) {
       console.error('Error fetching standard collection:', standardCollectionError);
     }
     if (proCollectionError) {
       console.error('Error fetching pro collection:', proCollectionError);
     }
-  }, [standardCollection, proCollection, standardCurrent, standardMax, proCurrent, proMax, standardMintPrice, proMintPrice, usdtDecimals, isLoadingStandardCollection, isLoadingProCollection, standardCollectionError, proCollectionError]);
+  }, [standardCollectionError, proCollectionError]);
 
   // Format price function - Price comes in Ether format (18 decimals), display as USDT
   const formatPrice = (raw?: bigint) => {
-    console.log('[formatPrice] Input:', { raw, rawString: raw?.toString() });
     if (raw === undefined || raw === null) {
-      console.log('[formatPrice] Returning N/A - raw is undefined or null');
       return 'N/A';
     }
     
@@ -160,19 +153,11 @@ const NFTMintDashboard: React.FC = () => {
     const whole = raw / divisor;
     const remainder = raw % divisor;
     
-    console.log('[formatPrice] Calculation:', { 
-      divisor: divisor.toString(), 
-      whole: whole.toString(), 
-      remainder: remainder.toString() 
-    });
-    
     // Handle remainder
     if (remainder === BigInt(0)) {
       // No decimal part
       const numValue = Number(whole);
-      const formatted = `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT`;
-      console.log('[formatPrice] Result (no decimals):', formatted);
-      return formatted;
+      return `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT`;
     } else {
       // Convert remainder to decimal string
       const remainderStr = remainder.toString().padStart(decimals, '0');
@@ -182,9 +167,7 @@ const NFTMintDashboard: React.FC = () => {
       const decimalValue = parseFloat(`0.${trimmedRemainder}`);
       const totalValue = Number(whole) + decimalValue;
       
-      const formatted = `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
-      console.log('[formatPrice] Result (with decimals):', formatted);
-      return formatted;
+      return `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
     }
   };
   const formattedStandardPrice = formatPrice(standardMintPrice);
@@ -259,51 +242,6 @@ const NFTMintDashboard: React.FC = () => {
     mintingWindowOpenPro &&
     !isStatusLoading &&
     !hasProNFT; // Only disable if Pro NFT Minted (Standard NFT doesn't block Pro)
-
-  // Debug button states
-  useEffect(() => {
-    console.log('Button States Debug:', {
-      isConnected,
-      standardButtonEnabled,
-      proButtonEnabled,
-      standardMintPrice: standardMintPrice?.toString(),
-      proMintPrice: proMintPrice?.toString(),
-      whitelistBlockedStandard,
-      whitelistBlockedPro,
-      isStandardProcessing,
-      isProProcessing,
-      mintingWindowOpenStandard,
-      mintingWindowOpenPro,
-      isStatusLoading,
-      hasStandardNFT,
-      hasProNFT,
-      publicMintActiveStandard,
-      publicMintActivePro,
-      whitelistMintActiveStandard,
-      whitelistMintActivePro,
-      isWhitelisted,
-    });
-  }, [
-    isConnected,
-    standardButtonEnabled,
-    proButtonEnabled,
-    standardMintPrice,
-    proMintPrice,
-    whitelistBlockedStandard,
-    whitelistBlockedPro,
-    isStandardProcessing,
-    isProProcessing,
-    mintingWindowOpenStandard,
-    mintingWindowOpenPro,
-    isStatusLoading,
-    hasStandardNFT,
-    hasProNFT,
-    publicMintActiveStandard,
-    publicMintActivePro,
-    whitelistMintActiveStandard,
-    whitelistMintActivePro,
-    isWhitelisted,
-  ]);
 
   // Handle approve success - proceed to mint
   useEffect(() => {
@@ -529,7 +467,10 @@ const NFTMintDashboard: React.FC = () => {
 
           {/* Mint Button */}
           <button
-            onClick={() => handleMint(1)}
+            onClick={() => {
+              if (!standardButtonEnabled) return;
+              handleMint(1);
+            }}
             disabled={!standardButtonEnabled}
             className={`w-full mt-6 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
               standardButtonEnabled ? 'cursor-pointer hover:brightness-110' : 'cursor-not-allowed opacity-50'
@@ -629,7 +570,10 @@ const NFTMintDashboard: React.FC = () => {
 
           {/* Mint Button */}
           <button
-            onClick={() => handleMint(2)}
+            onClick={() => {
+              if (!proButtonEnabled) return;
+              handleMint(2);
+            }}
             disabled={!proButtonEnabled}
             className={`w-full mt-6 py-3 px-6 rounded-lg font-semibold text-white transition-all duration-150 relative overflow-hidden ${
               proButtonEnabled ? 'cursor-pointer hover:brightness-110' : 'cursor-not-allowed opacity-50'
@@ -650,6 +594,8 @@ const NFTMintDashboard: React.FC = () => {
           >
             {hasProNFT
               ? 'Pro NFT Minted'
+              : hasStandardNFT
+              ? 'Upgrade to Pro'
               : !isConnected
               ? 'Connect Wallet'
               : whitelistBlockedPro

@@ -29,8 +29,15 @@ const SubscriptionPage: React.FC = () => {
   const { userInfo, isLoading: isLoadingUserInfo, refetch: refetchUserInfo } = useUserInfo(userId || undefined);
   
   // Check which NFTs user has minted
-  const hasStandardNFT = userInfo?.collectionIds?.some(id => Number(id) === 1) ?? false;
-  const hasProNFT = userInfo?.collectionIds?.some(id => Number(id) === 2) ?? false;
+  // Handle both bigint and number types
+  const hasStandardNFT = userInfo?.collectionIds?.some(id => {
+    const numId = typeof id === 'bigint' ? Number(id) : Number(id);
+    return numId === 1;
+  }) ?? false;
+  const hasProNFT = userInfo?.collectionIds?.some(id => {
+    const numId = typeof id === 'bigint' ? Number(id) : Number(id);
+    return numId === 2;
+  }) ?? false;
   const hasAnyNFT = hasStandardNFT || hasProNFT;
   
   // Validate wallet address mapping
@@ -75,9 +82,7 @@ const SubscriptionPage: React.FC = () => {
 
   // Format price function - Price comes in Ether format (18 decimals), display as USDT
   const formatPrice = (raw?: bigint): string => {
-    console.log('[formatPrice] Input:', { raw, rawString: raw?.toString() });
     if (raw === undefined || raw === null) {
-      console.log('[formatPrice] Returning Loading...');
       return 'Loading...';
     }
     
@@ -87,19 +92,11 @@ const SubscriptionPage: React.FC = () => {
     const whole = raw / divisor;
     const remainder = raw % divisor;
     
-    console.log('[formatPrice] Calculation:', { 
-      divisor: divisor.toString(), 
-      whole: whole.toString(), 
-      remainder: remainder.toString() 
-    });
-    
     // Handle remainder
     if (remainder === BigInt(0)) {
       // No decimal part
       const numValue = Number(whole);
-      const formatted = `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT/m`;
-      console.log('[formatPrice] Result (no decimals):', formatted);
-      return formatted;
+      return `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT/m`;
     } else {
       // Convert remainder to decimal string
       const remainderStr = remainder.toString().padStart(decimals, '0');
@@ -109,42 +106,13 @@ const SubscriptionPage: React.FC = () => {
       const decimalValue = parseFloat(`0.${trimmedRemainder}`);
       const totalValue = Number(whole) + decimalValue;
       
-      const formatted = `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT/m`;
-      console.log('[formatPrice] Result (with decimals):', formatted);
-      return formatted;
+      return `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT/m`;
     }
   };
 
   const formattedStandardPrice = formatPrice(standardPrice);
   const formattedProPrice = formatPrice(proPrice);
 
-  // Debug logging for subscription data
-  useEffect(() => {
-    console.log('=== SUBSCRIPTION PAGE DEBUG ===');
-    console.log('User ID:', userId);
-    console.log('Is Connected:', isConnected);
-    console.log('Standard Price:', {
-      raw: standardPrice,
-      string: standardPrice?.toString(),
-      isLoading: isLoadingPrices,
-      error: pricesError,
-    });
-    console.log('Pro Price:', {
-      raw: proPrice,
-      string: proPrice?.toString(),
-      isLoading: isLoadingPrices,
-      error: pricesError,
-    });
-    console.log('USDT Meta:', {
-      address: usdtAddress,
-      decimals: usdtDecimals,
-      isLoading: isLoadingUsdtMeta,
-      error: usdtError,
-    });
-    console.log('Formatted Standard Price:', formattedStandardPrice);
-    console.log('Formatted Pro Price:', formattedProPrice);
-    console.log('================================');
-  }, [userId, isConnected, standardPrice, proPrice, isLoadingPrices, pricesError, usdtAddress, usdtDecimals, isLoadingUsdtMeta, usdtError, formattedStandardPrice, formattedProPrice]);
   
   // Subscription purchase hooks
   const { 
@@ -170,15 +138,11 @@ const SubscriptionPage: React.FC = () => {
   // Get user ID from localStorage
   useEffect(() => {
     const userData = getUserData();
-    console.log('[Subscription Page] User Data from localStorage:', userData);
     if (userData) {
       // Use userId or reffralId as userId
       const id = (userData as any).userId || (userData as any).reffralId;
-      console.log('[Subscription Page] Extracted User ID:', id);
       if (id) {
         setUserId(id);
-      } else {
-        console.warn('[Subscription Page] No user ID found in userData');
       }
     } else {
       console.warn('[Subscription Page] No user data found in localStorage');

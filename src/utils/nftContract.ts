@@ -38,7 +38,7 @@ const ERC20_ABI = [
 const getContractAddress = (): `0x${string}` | undefined => {
   const address = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS;
   
-  console.log('[getContractAddress] Environment variable:', address);
+  // console.log('[getContractAddress] Environment variable:', address);
   
   if (!address || address === '0x0000000000000000000000000000000000000000') {
     if (typeof window !== 'undefined') {
@@ -46,7 +46,7 @@ const getContractAddress = (): `0x${string}` | undefined => {
     }
     return undefined;
   }
-  console.log('[getContractAddress] Returning address:', address);
+  // console.log('[getContractAddress] Returning address:', address);
   return address as `0x${string}`;
 };
 
@@ -595,31 +595,47 @@ export const useUserIdByWallet = (walletAddress?: `0x${string}`) => {
  */
 export const useUserInfo = (userId?: string) => {
   const contractAddress = getContractAddress();
+  const isEnabled = !!contractAddress && !!userId;
 
   const { data, isLoading, error, refetch } = useReadContract({
     address: contractAddress,
     abi: NFTmintABI,
-    functionName: 'getUserInfo',
+    functionName: 'getUserData',
     args: userId ? [userId] : undefined,
     query: {
-      enabled: !!contractAddress && !!userId,
+      enabled: isEnabled,
     },
   });
 
+  // Parse the new getUserData response structure:
+  // userId (string), referrerId (string), email (string), 
+  // referralRewards (uint256), nftRewards (uint256), subRewards (uint256),
+  // totalRefs (uint256), nftRefs (uint256), subRefs (uint256),
+  // minted (bool), mintedColls (uint256[])
   const tuple = data as
     | {
-        0?: string;
-        1?: string;
-        2?: string;
-        3?: bigint;
-        4?: boolean;
-        5?: bigint[];
+        0?: string;  // userId
+        1?: string;  // referrerId
+        2?: string;  // email
+        3?: bigint;  // referralRewards
+        4?: bigint;  // nftRewards
+        5?: bigint;  // subRewards
+        6?: bigint;  // totalRefs
+        7?: bigint;  // nftRefs
+        8?: bigint;  // subRefs
+        9?: boolean; // minted
+        10?: bigint[]; // mintedColls
         userId?: string;
         referrerId?: string;
         email?: string;
         referralRewards?: bigint;
-        isMinted?: boolean;
-        collectionIds?: bigint[];
+        nftRewards?: bigint;
+        subRewards?: bigint;
+        totalRefs?: bigint;
+        nftRefs?: bigint;
+        subRefs?: bigint;
+        minted?: boolean;
+        mintedColls?: bigint[];
       }
     | undefined;
 
@@ -629,8 +645,14 @@ export const useUserInfo = (userId?: string) => {
         referrerId: tuple.referrerId ?? tuple[1],
         email: tuple.email ?? tuple[2],
         referralRewards: tuple.referralRewards ?? tuple[3],
-        isMinted: tuple.isMinted ?? tuple[4] ?? false,
-        collectionIds: tuple.collectionIds ?? tuple[5] ?? [],
+        nftRewards: tuple.nftRewards ?? tuple[4],
+        subRewards: tuple.subRewards ?? tuple[5],
+        totalRefs: tuple.totalRefs ?? tuple[6],
+        nftRefs: tuple.nftRefs ?? tuple[7],
+        subRefs: tuple.subRefs ?? tuple[8],
+        isMinted: tuple.minted ?? tuple[9] ?? false,
+        // Map mintedColls to collectionIds for backward compatibility
+        collectionIds: tuple.mintedColls ?? tuple[10] ?? [],
       }
     : undefined;
 

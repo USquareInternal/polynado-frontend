@@ -21,6 +21,7 @@ interface ReferredUser {
   userWallet: string;
   collectionId?: number;
   tokenId?: number;
+  type?: string; // "nftMint" or "subscription"
   price?: string;
   priceInUsdt?: string;
   nftType?: string;
@@ -30,6 +31,7 @@ interface ReferredUser {
   referralPercentage?: number;
   blockNumber?: number;
   transactionHash?: string;
+  expiryTimestamp?: string | null;
   createdAt: string;
   updatedAt: string;
   __v?: number;
@@ -42,12 +44,16 @@ interface ReferredUsersResponse {
 }
 
 interface ReferralStatsResponse {
-  referredUsers: ReferredUser[];
-  referredUsersStats: {
-    totalNumber: number;
-    totalAmount: number | string;
-    totalNFTMintUsers: number;
-    totalSubscriptionUsers: number;
+  message: string;
+  success: boolean;
+  data: {
+    referredUsers: ReferredUser[];
+    referredUsersStats: {
+      totalNumber: number;
+      totalAmount: number | string;
+      totalNFTMintUsers: number;
+      totalSubscriptionUsers: number;
+    };
   };
 }
 
@@ -165,7 +171,14 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
           throw new Error(`Failed to fetch referred users: ${response.statusText}`);
         }
 
-        const data: ReferralStatsResponse = await response.json();
+        const responseData: ReferralStatsResponse = await response.json();
+
+        // Check if response is successful and has data
+        if (!responseData.success || !responseData.data) {
+          throw new Error('Invalid API response structure');
+        }
+
+        const data = responseData.data;
 
         // Update stats from API response
         if (data.referredUsersStats) {
@@ -189,21 +202,44 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
           
           // Map sorted data to events
           const events: ReferralEvent[] = sortedData.map((user) => {
-            // Determine event type based on nftType or collectionId
+            // Determine event type based on type field, nftType, or collectionId
             let eventType = 'User Registration';
-            if (user.nftType) {
+            if (user.type === 'nftMint') {
+              if (user.nftType) {
+                eventType = `NFT Mint (${user.nftType})`;
+              } else if (user.collectionId) {
+                eventType = user.collectionId === 1 ? 'NFT Mint (Standard)' : user.collectionId === 2 ? 'NFT Mint (Pro)' : 'NFT Mint';
+              } else {
+                eventType = 'NFT Mint';
+              }
+            } else if (user.type === 'subscription') {
+              eventType = 'Subscription';
+            } else if (user.nftType) {
               eventType = `NFT Mint (${user.nftType})`;
             } else if (user.collectionId) {
               eventType = user.collectionId === 1 ? 'NFT Mint (Standard)' : user.collectionId === 2 ? 'NFT Mint (Pro)' : 'NFT Mint';
             }
             
-            // Format reward amount (already in USDT format from API)
-            const rewardAmount = user.referralAmountInUsdt 
-              ? `${parseFloat(user.referralAmountInUsdt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`
-              : '0 USDT';
+            // Format reward amount - handle both wei format and decimal string format
+            let rewardAmount = '0 USDT';
+            if (user.referralAmountInUsdt) {
+              // Check if it's a wei format (very large number) or decimal string
+              const amountStr = user.referralAmountInUsdt.toString();
+              const parsedAmount = parseFloat(amountStr);
+              
+              // If the number is very large (likely wei), convert it
+              if (parsedAmount > 1000000000000) {
+                // It's in wei format, convert using formatRewardAmount
+                rewardAmount = formatRewardAmount(amountStr);
+              } else {
+                // It's already in USDT format (decimal string)
+                rewardAmount = `${parsedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
+              }
+            }
             
             // Determine status based on referralAmountInUsdt
-            const rewardStatus = parseFloat(user.referralAmountInUsdt || '0') > 0 ? 'Paid' : 'Pending';
+            const amountValue = parseFloat(user.referralAmountInUsdt || '0');
+            const rewardStatus = amountValue > 0 ? 'Paid' : 'Pending';
             
             return {
               id: user.userWallet || user.userId || 'N/A',
@@ -316,7 +352,13 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
                         <td className="px-4 py-3">{event.id}</td>
                         <td className="px-4 py-3 text-gray-400">{event.date}</td>
                         <td className="px-4 py-3">
-                          <span className={event.type === 'NFT Mint' ? 'text-[#0fd8ff]' : event.type === 'Subscription' ? 'text-[#d27cf4]' : 'text-[#f7aa50]'}>
+                          <span className={
+                            event.type.includes('NFT Mint') 
+                              ? 'text-[#0fd8ff]' 
+                              : event.type === 'Subscription' 
+                              ? 'text-[#d27cf4]' 
+                              : 'text-[#f7aa50]'
+                          }>
                             {event.type}
                           </span>
                         </td>

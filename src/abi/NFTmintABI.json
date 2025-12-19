@@ -286,6 +286,12 @@
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "rewardType",
+				"type": "string"
 			}
 		],
 		"name": "ReferralRewardPaid",
@@ -652,67 +658,16 @@
 				"type": "uint256"
 			}
 		],
-		"name": "getCollectionInfo",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "collectionAddress",
-						"type": "address"
-					},
-					{
-						"internalType": "string",
-						"name": "name",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "symbol",
-						"type": "string"
-					},
-					{
-						"internalType": "uint256",
-						"name": "maxSupply",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "mintPrice",
-						"type": "uint256"
-					},
-					{
-						"internalType": "bool",
-						"name": "isActive",
-						"type": "bool"
-					}
-				],
-				"internalType": "struct PolynadoFactory.CollectionInfo",
-				"name": "",
-				"type": "tuple"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_collectionId",
-				"type": "uint256"
-			}
-		],
 		"name": "getCollectionSupply",
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "current",
+				"name": "",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "max",
+				"name": "",
 				"type": "uint256"
 			}
 		],
@@ -731,22 +686,22 @@
 		"outputs": [
 			{
 				"internalType": "enum PolynadoFactory.SubscriptionType",
-				"name": "subType",
+				"name": "",
 				"type": "uint8"
 			},
 			{
 				"internalType": "uint256",
-				"name": "expiryTimestamp",
+				"name": "",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "remainingTime",
+				"name": "",
 				"type": "uint256"
 			},
 			{
 				"internalType": "bool",
-				"name": "isActive",
+				"name": "",
 				"type": "bool"
 			}
 		],
@@ -780,38 +735,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "getTotalReferralRewards",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_wallet",
-				"type": "address"
-			}
-		],
-		"name": "getUserIdByWallet",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "string",
@@ -819,56 +742,62 @@
 				"type": "string"
 			}
 		],
-		"name": "getUserInfo",
+		"name": "getUserData",
 		"outputs": [
 			{
 				"internalType": "string",
-				"name": "",
+				"name": "userId",
 				"type": "string"
 			},
 			{
 				"internalType": "string",
-				"name": "",
+				"name": "referrerId",
 				"type": "string"
 			},
 			{
 				"internalType": "string",
-				"name": "",
+				"name": "email",
 				"type": "string"
 			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "referralRewards",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "nftRewards",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "subRewards",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalRefs",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "nftRefs",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "subRefs",
 				"type": "uint256"
 			},
 			{
 				"internalType": "bool",
-				"name": "",
+				"name": "minted",
 				"type": "bool"
 			},
 			{
 				"internalType": "uint256[]",
-				"name": "",
+				"name": "mintedColls",
 				"type": "uint256[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_token",
-				"type": "address"
-			}
-		],
-		"name": "isTokenSupported",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -883,25 +812,6 @@
 			}
 		],
 		"name": "isValidCollection",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "_userId",
-				"type": "string"
-			}
-		],
-		"name": "isWhitelisted",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -933,6 +843,19 @@
 		"name": "joinPolynado",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "nftReferralRewardBps",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -1010,19 +933,6 @@
 		"name": "publicMint",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "referralRewardBps",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -1152,7 +1062,12 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_bps",
+				"name": "_nftBps",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_subBps",
 				"type": "uint256"
 			}
 		],
@@ -1195,6 +1110,19 @@
 	{
 		"inputs": [],
 		"name": "standardSubscriptionPrice",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "subscriptionReferralRewardBps",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -1269,7 +1197,33 @@
 	},
 	{
 		"inputs": [],
+		"name": "totalNftReferralRewardsPaid",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "totalReferralRewardsPaid",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalSubscriptionReferralRewardsPaid",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -1330,25 +1284,6 @@
 		"inputs": [
 			{
 				"internalType": "string",
-				"name": "_userId",
-				"type": "string"
-			}
-		],
-		"name": "userExists",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
 				"name": "",
 				"type": "string"
 			}
@@ -1373,6 +1308,31 @@
 			{
 				"internalType": "uint256",
 				"name": "referralRewards",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "nftReferralRewards",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "subscriptionReferralRewards",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalReferrals",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "nftReferrals",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "subscriptionReferrals",
 				"type": "uint256"
 			},
 			{

@@ -73,7 +73,7 @@ const SubscriptionPage: React.FC = () => {
   // Approve USDT hook
   const { approveUSDT, isPending: isApproving, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useApproveUSDT(resolvedUsdtAddress, nftContractAddress);
 
-  // Format price function - USDT uses 6 decimals
+  // Format price function - Price comes in Ether format (18 decimals), display as USDT
   const formatPrice = (raw?: bigint): string => {
     console.log('[formatPrice] Input:', { raw, rawString: raw?.toString() });
     if (raw === undefined || raw === null) {
@@ -81,8 +81,8 @@ const SubscriptionPage: React.FC = () => {
       return 'Loading...';
     }
     
-    // USDT uses 6 decimals
-    const decimals = 6;
+    // Price comes in Ether format (18 decimals)
+    const decimals = 18;
     const divisor = BigInt(10 ** decimals);
     const whole = raw / divisor;
     const remainder = raw % divisor;
@@ -97,7 +97,7 @@ const SubscriptionPage: React.FC = () => {
     if (remainder === BigInt(0)) {
       // No decimal part
       const numValue = Number(whole);
-      const formatted = `$${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/m`;
+      const formatted = `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT/m`;
       console.log('[formatPrice] Result (no decimals):', formatted);
       return formatted;
     } else {
@@ -109,7 +109,7 @@ const SubscriptionPage: React.FC = () => {
       const decimalValue = parseFloat(`0.${trimmedRemainder}`);
       const totalValue = Number(whole) + decimalValue;
       
-      const formatted = `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}/m`;
+      const formatted = `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT/m`;
       console.log('[formatPrice] Result (with decimals):', formatted);
       return formatted;
     }

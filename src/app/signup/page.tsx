@@ -100,28 +100,9 @@ const SignupPage: React.FC = () => {
         return;
       }
 
-      setIsLoading(true);
-      try {
-        const response = await signup({
-          email: formData.email,
-          password: formData.password,
-          referredBy: formData.referralCode.trim() || null,
-        });
-
-        if (response.success) {
-          storeToken(response.token);
-          storeUserData(response.user);
-          showSuccessToast('Account created successfully!');
-          // Mark user as new (needs to join Polynado)
-          localStorage.setItem('isNewUser', 'true');
-          // Move to wallet connection step
-          setStep(4);
-        }
-      } catch (error: any) {
-        showErrorToast(error.message || 'Failed to create account');
-      } finally {
-        setIsLoading(false);
-      }
+      // Just move to step 4 without calling signup API
+      // Signup API will be called after successful joinPolynado
+      setStep(4);
     }
   };
 
@@ -607,42 +588,94 @@ const SignupPage: React.FC = () => {
     </form>
   );
 
-  // Handle joinPolynado success
+  // Handle joinPolynado success - then call signup API
   useEffect(() => {
-    if (isJoinSuccess && hash && step === 4) {
+    if (isJoinSuccess && hash && step === 4 && !hasJoined) {
       console.log("Transaction successful! Hash:", hash);
-      showSuccessToast('Successfully joined Polynado!');
       setHasJoined(true);
-      // Remove new user flag after successful join
-      localStorage.removeItem('isNewUser');
-      // Redirect to login after a short delay
-      setTimeout(() => {
-        router.push('/login');
-      }, 1500);
+      
+      // Call signup API after successful smart contract call
+      const callSignupAPI = async () => {
+        setIsLoading(true);
+        try {
+          const response = await signup({
+            email: formData.email,
+            password: formData.password,
+            referredBy: formData.referralCode.trim() || null,
+          });
+
+          if (response.success) {
+            storeToken(response.token);
+            storeUserData(response.user);
+            showSuccessToast('Account created successfully!');
+            // Remove new user flag after successful signup
+            localStorage.removeItem('isNewUser');
+            // Redirect to login after a short delay
+            setTimeout(() => {
+              router.push('/login');
+            }, 1500);
+          } else {
+            showErrorToast(response.message || 'Failed to create account');
+            setIsLoading(false);
+          }
+        } catch (error: any) {
+          showErrorToast(error.message || 'Failed to create account');
+          setIsLoading(false);
+        }
+      };
+
+      callSignupAPI();
     }
-  }, [isJoinSuccess, hash, step, router]);
+  }, [isJoinSuccess, hash, step, router, hasJoined, formData]);
 
   // Fallback: If transaction has hash but isConfirming is true for too long, assume success
   useEffect(() => {
-    if (step !== 4 || !hash || isJoinSuccess || joinError || !isJoinConfirming) return;
+    if (step !== 4 || !hash || isJoinSuccess || joinError || !isJoinConfirming || hasJoined) return;
 
     // If confirming for more than 30 seconds, assume success (transaction likely confirmed)
     // This handles cases where wagmi doesn't properly detect transaction completion
     const confirmingTimeout = setTimeout(() => {
-      if (isJoinConfirming && hash && !isJoinSuccess && !joinError && !isJoinPending) {
+      if (isJoinConfirming && hash && !isJoinSuccess && !joinError && !isJoinPending && !hasJoined) {
         console.log("Transaction confirming for too long, assuming success. Hash:", hash);
         console.log("Current state - isPending:", isJoinPending, "isConfirming:", isJoinConfirming, "isSuccess:", isJoinSuccess);
-        showSuccessToast('Transaction confirmed! Successfully joined Polynado!');
         setHasJoined(true);
-        localStorage.removeItem('isNewUser');
-        setTimeout(() => {
-          router.push('/login');
-        }, 1500);
+        
+        // Call signup API after assuming transaction success
+        const callSignupAPI = async () => {
+          setIsLoading(true);
+          try {
+            const response = await signup({
+              email: formData.email,
+              password: formData.password,
+              referredBy: formData.referralCode.trim() || null,
+            });
+
+            if (response.success) {
+              storeToken(response.token);
+              storeUserData(response.user);
+              showSuccessToast('Transaction confirmed! Account created successfully!');
+              // Remove new user flag after successful signup
+              localStorage.removeItem('isNewUser');
+              // Redirect to login after a short delay
+              setTimeout(() => {
+                router.push('/login');
+              }, 1500);
+            } else {
+              showErrorToast(response.message || 'Failed to create account');
+              setIsLoading(false);
+            }
+          } catch (error: any) {
+            showErrorToast(error.message || 'Failed to create account');
+            setIsLoading(false);
+          }
+        };
+
+        callSignupAPI();
       }
     }, 30 * 1000); // 30 seconds
 
     return () => clearTimeout(confirmingTimeout);
-  }, [hash, isJoinConfirming, isJoinSuccess, joinError, isJoinPending, step, router]);
+  }, [hash, isJoinConfirming, isJoinSuccess, joinError, isJoinPending, step, router, hasJoined, formData]);
 
   // Handle joinPolynado error
   useEffect(() => {
@@ -672,29 +705,26 @@ const SignupPage: React.FC = () => {
       return;
     }
 
-    // Get user data
-    const userData = getUserData();
-    if (!userData) {
-      showErrorToast('User data not found. Please try again.');
-      return;
-    }
+    // For new signup, we don't have userData yet (signup API hasn't been called)
+    // We'll use an empty string for userId - the contract/backend might handle this
+    // The actual userId will be set after signup API call
+    const userId = ''; // Empty string, will be set after signup API succeeds
+    const referrerId = formData.referralCode.trim() || '';
+    const email = formData.email;
 
-    // Extract parameters
-    const userId = (userData as any).userId;
-    const referrerId = (userData as any).referredBy  || '';
-    const email = userData.email;
-
-    if (!userId || !email) {
-      showErrorToast('Missing user information. Please try again.');
+    if (!email) {
+      showErrorToast('Missing email. Please go back and enter your email.');
       return;
     }
 
     try {
-      console.log("userId", userId);
+      console.log("Calling joinPolynado before signup API");
+      console.log("userId (empty):", userId);
       console.log("referrerId", referrerId);
       console.log("email", email);
       // joinPolynado doesn't return a value - it triggers writeContract
       // Transaction state is tracked via hash, isPending, isConfirming, isSuccess from the hook
+      // Note: userId is empty string - backend/contract might generate it or use wallet address
       joinPolynado(userId, referrerId, email);
       console.log("joinPolynado called - waiting for transaction hash...");
     } catch (err: any) {

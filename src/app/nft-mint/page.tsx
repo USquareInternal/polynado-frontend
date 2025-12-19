@@ -322,15 +322,15 @@ const NFTMintDashboard: React.FC = () => {
     const mintingWindowOpenLocal =
       collectionId === 1 ? mintingWindowOpenStandard : mintingWindowOpenPro;
 
-    const mintingAllowed =
-      !hasMinted &&
-      !whitelistBlockedLocal &&
-      (mintingWindowOpenLocal === true || whitelistReadyLocal);
+    // const mintingAllowed =
+    //   !hasMinted &&
+    //   !whitelistBlockedLocal &&
+    //   (mintingWindowOpenLocal === true || whitelistReadyLocal);
 
-    if (!mintingAllowed) {
-      setTierError(collectionId, 'Minting is not active.');
-      return;
-    }
+    // if (!mintingAllowed) {
+    //   setTierError(collectionId, 'Minting is not active.');
+    //   return;
+    // }
 
     const collection = collectionId === 1 ? standardCollection : proCollection;
     const mintPrice = collection?.mintPrice;

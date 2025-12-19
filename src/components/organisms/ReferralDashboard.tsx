@@ -108,22 +108,37 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
     },
   ];
 
-  // Convert wei to USDT (assuming 18 decimals)
-  const formatRewardAmount = (weiAmount: number | string): string => {
-    const amount = typeof weiAmount === 'string' ? BigInt(weiAmount) : BigInt(weiAmount);
-    const decimals = 18;
-    const divisor = BigInt(10 ** decimals);
-    const whole = amount / divisor;
-    const remainder = amount % divisor;
+  // Convert wei to USDT (assuming 18 decimals) or format already converted USDT values
+  const formatRewardAmount = (amount: number | string): string => {
+    // Convert to number for comparison
+    const numValue = typeof amount === 'string' ? parseFloat(amount) : amount;
     
-    if (remainder === BigInt(0)) {
-      return `${whole.toString()} USDT`;
-    } else {
-      const remainderStr = remainder.toString().padStart(decimals, '0');
-      const trimmedRemainder = remainderStr.replace(/0+$/, '');
-      const decimalValue = parseFloat(`0.${trimmedRemainder}`);
-      const totalValue = Number(whole) + decimalValue;
-      return `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
+    // If the value is already in USDT format (small number or decimal), format it directly
+    // We consider values less than 1e12 (1 trillion) as already in USDT format
+    if (numValue < 1e12) {
+      return `${numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
+    }
+    
+    // Otherwise, treat it as wei format and convert
+    try {
+      const weiAmount = typeof amount === 'string' ? BigInt(amount) : BigInt(Math.floor(amount));
+      const decimals = 18;
+      const divisor = BigInt(10 ** decimals);
+      const whole = weiAmount / divisor;
+      const remainder = weiAmount % divisor;
+      
+      if (remainder === BigInt(0)) {
+        return `${whole.toString()} USDT`;
+      } else {
+        const remainderStr = remainder.toString().padStart(decimals, '0');
+        const trimmedRemainder = remainderStr.replace(/0+$/, '');
+        const decimalValue = parseFloat(`0.${trimmedRemainder}`);
+        const totalValue = Number(whole) + decimalValue;
+        return `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT`;
+      }
+    } catch (error) {
+      // Fallback: if BigInt conversion fails, just format as is
+      return `${numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
     }
   };
 
@@ -172,14 +187,18 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
         }
 
         const responseData: ReferralStatsResponse = await response.json();
-console.log("responseData",responseData);
+        console.log("responseData", responseData);
+        
         // Check if response is successful and has data
         if (!responseData.success || !responseData.data) {
           throw new Error('Invalid API response structure');
         }
 
         const data = responseData.data;
-console.log("data",data);
+        console.log("data", data);
+        console.log("referredUsers array:", data.referredUsers);
+        console.log("referredUsers length:", data.referredUsers?.length);
+        
         // Update stats from API response
         if (data.referredUsersStats) {
           const statsData = data.referredUsersStats;
@@ -195,63 +214,81 @@ console.log("data",data);
 
         // Update referral events from referredUsers array
         if (data.referredUsers && Array.isArray(data.referredUsers)) {
+          console.log("Processing referredUsers, count:", data.referredUsers.length);
+          
           // Sort by date (newest first) - sort by createdAt before mapping
-          const sortedData = [...data.referredUsers].sort((a, b) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+          const sortedData = [...data.referredUsers].sort((a, b) => {
+            try {
+              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            } catch (error) {
+              console.error('Error sorting by date:', error, { a, b });
+              return 0;
+            }
+          });
+          
+          console.log("sortedData:", sortedData);
           
           // Map sorted data to events
-          const events: ReferralEvent[] = sortedData.map((user) => {
-            // Determine event type based on type field, nftType, or collectionId
-            let eventType = 'User Registration';
-            if (user.type === 'nftMint') {
-              if (user.nftType) {
+          const events: ReferralEvent[] = sortedData.map((user, index) => {
+            try {
+              console.log(`Processing user ${index}:`, user);
+              
+              // Determine event type based on type field, nftType, or collectionId
+              let eventType = 'User Registration';
+              if (user.type === 'nftMint') {
+                if (user.nftType) {
+                  eventType = `NFT Mint (${user.nftType})`;
+                } else if (user.collectionId) {
+                  eventType = user.collectionId === 1 ? 'NFT Mint (Standard)' : user.collectionId === 2 ? 'NFT Mint (Pro)' : 'NFT Mint';
+                } else {
+                  eventType = 'NFT Mint';
+                }
+              } else if (user.type === 'subscription') {
+                eventType = 'Subscription';
+              } else if (user.nftType) {
                 eventType = `NFT Mint (${user.nftType})`;
               } else if (user.collectionId) {
                 eventType = user.collectionId === 1 ? 'NFT Mint (Standard)' : user.collectionId === 2 ? 'NFT Mint (Pro)' : 'NFT Mint';
-              } else {
-                eventType = 'NFT Mint';
               }
-            } else if (user.type === 'subscription') {
-              eventType = 'Subscription';
-            } else if (user.nftType) {
-              eventType = `NFT Mint (${user.nftType})`;
-            } else if (user.collectionId) {
-              eventType = user.collectionId === 1 ? 'NFT Mint (Standard)' : user.collectionId === 2 ? 'NFT Mint (Pro)' : 'NFT Mint';
-            }
-            
-            // Format reward amount - handle both wei format and decimal string format
-            let rewardAmount = '0 USDT';
-            if (user.referralAmountInUsdt) {
-              // Check if it's a wei format (very large number) or decimal string
-              const amountStr = user.referralAmountInUsdt.toString();
-              const parsedAmount = parseFloat(amountStr);
               
-              // If the number is very large (likely wei), convert it
-              if (parsedAmount > 1000000000000) {
-                // It's in wei format, convert using formatRewardAmount
-                rewardAmount = formatRewardAmount(amountStr);
-              } else {
-                // It's already in USDT format (decimal string)
-                rewardAmount = `${parsedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
+              // Format reward amount - handle both wei format and decimal string format
+              let rewardAmount = '0 USDT';
+              if (user.referralAmountInUsdt) {
+                rewardAmount = formatRewardAmount(user.referralAmountInUsdt);
               }
+              
+              // Determine status based on referralAmountInUsdt
+              const amountValue = parseFloat(String(user.referralAmountInUsdt || '0'));
+              const rewardStatus = amountValue > 0 ? 'Paid' : 'Pending';
+              
+              const event = {
+                id: user.userWallet || user.userId || 'N/A',
+                date: formatDate(user.createdAt),
+                type: eventType,
+                reward: rewardAmount,
+                status: rewardStatus,
+              };
+              
+              console.log(`Created event ${index}:`, event);
+              return event;
+            } catch (error) {
+              console.error(`Error processing user ${index}:`, error, user);
+              // Return a fallback event instead of breaking the entire mapping
+              return {
+                id: user.userWallet || user.userId || 'N/A',
+                date: user.createdAt ? formatDate(user.createdAt) : 'N/A',
+                type: 'Unknown',
+                reward: '0 USDT',
+                status: 'Pending',
+              };
             }
-            
-            // Determine status based on referralAmountInUsdt
-            const amountValue = parseFloat(user.referralAmountInUsdt || '0');
-            const rewardStatus = amountValue > 0 ? 'Paid' : 'Pending';
-            
-            return {
-              id: user.userWallet || user.userId || 'N/A',
-              date: formatDate(user.createdAt),
-              type: eventType,
-              reward: rewardAmount,
-              status: rewardStatus,
-            };
           });
-          console.log("events",events);
+          
+          console.log("Final events array:", events);
+          console.log("Events length:", events.length);
           setReferralEvents(events);
         } else {
+          console.warn("referredUsers is not an array or is missing:", data.referredUsers);
           setReferralEvents([]);
         }
       } catch (error) {

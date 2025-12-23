@@ -21,7 +21,7 @@ import { showSuccessAlert,showFailedAlert } from "@/utils/SweetAlertUtils";
 import { isUserRejection, showRejectionToast } from '@/utils/toast';
 import { useWalletValidation } from '@/hooks/useWalletValidation';
 import { getUserData } from '@/services/authService';
-import LoaderBar from '@/components/atoms/LoaderBar';
+import Spinner from '@/components/atoms/Spinner';
 
 const NFTMintDashboard: React.FC = () => {
   const { isConnected, address } = useAccount();
@@ -450,7 +450,7 @@ const NFTMintDashboard: React.FC = () => {
 
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16 py-8 xl:py-12 fullhd:py-16 max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px]">
-      <LoaderBar visible={showLoader} />
+      <Spinner visible={showLoader} size="lg" fullScreen={true} />
       {/* Header Section */}
       <div className="mb-8 xl:mb-12 fullhd:mb-16">
         <h1 className="text-3xl sm:text-4xl xl:text-5xl fullhd:text-6xl font-bold text-white mb-3 xl:mb-4 fullhd:mb-6">

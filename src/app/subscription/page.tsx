@@ -25,7 +25,7 @@ import { getUserData, getToken } from '@/services/authService';
 import { useSubscriptionInfo, useUserInfo } from '@/utils/nftContract';
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
 import { API_BASE_URL } from '@/components/organisms/WithdrawalHistory';
-import LoaderBar from '@/components/atoms/LoaderBar';
+import Spinner from '@/components/atoms/Spinner';
 
 // FRONTEND: Initialize Stripe with publishable key (pk_)
 // This is safe to expose in the browser - it's public
@@ -386,8 +386,8 @@ const SubscriptionPage: React.FC = () => {
           />
         </div>
 
-        <div className="relative z-10 max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16 py-12 space-y-4">
-          <LoaderBar visible={showLoader} />
+        <div className="relative z-10 max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16 py-12">
+          <Spinner visible={showLoader} size="lg" fullScreen={true} />
           {/* Header Section */}
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl xl:text-6xl fullhd:text-7xl font-bold text-white mb-4">

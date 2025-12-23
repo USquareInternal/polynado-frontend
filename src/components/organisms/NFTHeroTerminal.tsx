@@ -9,15 +9,15 @@ export const HeroTerminal: React.FC = () => {
       className="
         relative
         overflow-hidden
-        relative
         border border-gray-700
         rounded-[15px]
-        py-8 px-6 sm:px-10 md:px-14
+        py-8 xl:py-12 fullhd:py-16
+        px-6 sm:px-10 md:px-14 xl:px-20 fullhd:px-24
         text-center
         shadow-2xl
-        mb-8
-        max-w-[1236px]
-        md:min-h-[354px]
+        mb-8 xl:mb-12 fullhd:mb-16
+        max-w-[1236px] xl:max-w-[1400px] fullhd:max-w-[1600px]
+        md:min-h-[354px] xl:min-h-[400px] fullhd:min-h-[450px]
         mx-auto
       "
       style={{
@@ -36,17 +36,17 @@ export const HeroTerminal: React.FC = () => {
       {/* Content Container (Ensure content is above the overlay) */}
       <div className="relative text-white flex flex-col items-center space-y-4">
         {/* Access Badge - Looks good as is */}
-        <span className="inline-block px-4 py-1 text-xs sm:text-sm font-medium text-white border border-white/40 rounded-full bg-white/10 shadow-md">
+        {/* <span className="inline-block px-4 py-1 text-xs sm:text-sm font-medium text-white border border-white/40 rounded-full bg-white/10 shadow-md">
           Access
-        </span>
+        </span> */}
 
-        {/* Main Title - **IMPROVED RESPONSIVENESS** (text-3xl sm:text-4xl lg:text-5xl) */}
+        {/* Main Title - **IMPROVED RESPONSIVENESS** (text-3xl sm:text-4xl lg:text-5xl xl:text-6xl fullhd:text-7xl) */}
         <Heading
           level={1}
           className="
-            max-w-4xl mx-auto
+            max-w-4xl xl:max-w-5xl fullhd:max-w-6xl mx-auto
             text-white 
-            text-3xl sm:text-4xl lg:text-5xl 
+            text-3xl sm:text-4xl lg:text-5xl xl:text-6xl fullhd:text-7xl
             font-extrabold 
             leading-tight
           "
@@ -54,8 +54,8 @@ export const HeroTerminal: React.FC = () => {
           The Bloomberg Terminal for Prediction Markets
         </Heading>
 
-        {/* Description - **IMPROVED RESPONSIVENESS** (text-sm sm:text-base) */}
-        <p className="text-gray-200 max-w-2xl mx-auto text-sm sm:text-base">
+        {/* Description - **IMPROVED RESPONSIVENESS** (text-sm sm:text-base xl:text-lg fullhd:text-xl) */}
+        <p className="text-gray-200 max-w-2xl xl:max-w-3xl fullhd:max-w-4xl mx-auto text-sm sm:text-base xl:text-lg fullhd:text-xl">
           AI-powered intelligence, real-time data, and fair odds modeling to find your edge on Polymarket.
         </p>
 

@@ -1,26 +1,47 @@
 'use client';
+/**
+ * FRONTEND STRIPE INTEGRATION
+ * 
+ * This component handles all FRONTEND-related Stripe functionality:
+ * - Uses publishable key (pk_) - safe to expose to browser
+ * - Displays prices (for UI only - actual calculation happens on backend)
+ * - Redirects user to Stripe Checkout (secure payment page)
+ * - Handles success/cancel redirects from Stripe
+ * 
+ * BACKEND responsibilities (in /api/stripe/*):
+ * - Uses secret key (sk_) - never exposed to frontend
+ * - Calculates prices securely
+ * - Creates checkout sessions
+ * - Handles webhooks for database updates
+ */
+
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useAccount, useReadContract } from 'wagmi';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { CheckOutlined, CrownOutlined, ThunderboltOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { getUserData } from '@/services/authService';
-import { useSubscriptionPrices, useBuyStandardSubscription, useBuyProSubscription, useUSDTMeta, useApproveUSDT, getNFTContractAddress, useSubscriptionInfo, useUserIdByWallet, useUserInfo } from '@/utils/nftContract';
+import { getUserData, getToken } from '@/services/authService';
+import { useSubscriptionInfo, useUserInfo } from '@/utils/nftContract';
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
-import { useWalletValidation } from '@/hooks/useWalletValidation';
+import { API_BASE_URL } from '@/components/organisms/WithdrawalHistory';
+
+// FRONTEND: Initialize Stripe with publishable key (pk_)
+// This is safe to expose in the browser - it's public
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 const SubscriptionPage: React.FC = () => {
   const router = useRouter();
-  const { isConnected, address } = useAccount();
+  const searchParams = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
-  const [subscriptionStep, setSubscriptionStep] = useState<'idle' | 'approving' | 'buying' | 'success' | 'error'>('idle');
-  const [pendingSubscriptionType, setPendingSubscriptionType] = useState<'standard' | 'pro' | null>(null);
+  const [processingType, setProcessingType] = useState<'standard' | 'pro' | null>(null);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   
-  // Get subscription prices from contract
-  const { standardPrice, proPrice, isLoading: isLoadingPrices, error: pricesError } = useSubscriptionPrices();
-  const { usdtAddress, usdtDecimals, isLoading: isLoadingUsdtMeta, error: usdtError } = useUSDTMeta();
+  // FRONTEND: Display prices only (for UI)
+  // NOTE: Actual price calculation happens on backend to prevent tampering
+  // These values are just for display purposes
+  const standardPrice = 10; // Display: $10/month
+  const proPrice = 20; // Display: $20/month
   
   // Get subscription info for logged-in user
   const { subscriptionInfo, isLoading: isLoadingSubscriptionInfo, refetch: refetchSubscriptionInfo } = useSubscriptionInfo(userId || undefined);
@@ -40,100 +61,9 @@ const SubscriptionPage: React.FC = () => {
   }) ?? false;
   const hasAnyNFT = hasStandardNFT || hasProNFT;
   
-  // Validate wallet address mapping
-  const { isWalletMismatch } = useWalletValidation();
-  
-  // Check wallet to userId mapping (for display purposes)
-  const { userId: walletUserId, isLoading: isLoadingWalletMapping } = useUserIdByWallet(address);
-  
   // Check if subscription is active
   const isSubscriptionActive = subscriptionInfo?.isActive ?? false;
   const activeSubscriptionType = subscriptionInfo?.subType ?? 0;
-  
-  // Get contract addresses
-  const nftContractAddress = getNFTContractAddress();
-  const usdtEnvAddress = process.env.NEXT_PUBLIC_USDT_ADDRESS as `0x${string}` | undefined;
-  const resolvedUsdtAddress = (usdtEnvAddress || usdtAddress) as `0x${string}` | undefined;
-  
-  // Check USDT allowance
-  const { data: allowance } = useReadContract({
-    address: resolvedUsdtAddress,
-    abi: [
-      {
-        inputs: [
-          { name: 'owner', type: 'address' },
-          { name: 'spender', type: 'address' },
-        ],
-        name: 'allowance',
-        outputs: [{ name: '', type: 'uint256' }],
-        stateMutability: 'view',
-        type: 'function',
-      },
-    ],
-    functionName: 'allowance',
-    args: address && nftContractAddress ? [address, nftContractAddress] : undefined,
-    query: {
-      enabled: !!address && !!resolvedUsdtAddress && !!nftContractAddress,
-    },
-  });
-  
-  // Approve USDT hook
-  const { approveUSDT, isPending: isApproving, isSuccess: isApproveSuccess, error: approveError, reset: resetApprove } = useApproveUSDT(resolvedUsdtAddress, nftContractAddress);
-
-  // Format price function - Price comes in Ether format (18 decimals), display as USDT
-  const formatPrice = (raw?: bigint): string => {
-    if (raw === undefined || raw === null) {
-      return 'Loading...';
-    }
-    
-    // Price comes in Ether format (18 decimals)
-    const decimals = 18;
-    const divisor = BigInt(10 ** decimals);
-    const whole = raw / divisor;
-    const remainder = raw % divisor;
-    
-    // Handle remainder
-    if (remainder === BigInt(0)) {
-      // No decimal part
-      const numValue = Number(whole);
-      return `${numValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USDT/m`;
-    } else {
-      // Convert remainder to decimal string
-      const remainderStr = remainder.toString().padStart(decimals, '0');
-      const trimmedRemainder = remainderStr.replace(/0+$/, '');
-      
-      // Combine whole and decimal parts
-      const decimalValue = parseFloat(`0.${trimmedRemainder}`);
-      const totalValue = Number(whole) + decimalValue;
-      
-      return `${totalValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} USDT/m`;
-    }
-  };
-
-  const formattedStandardPrice = formatPrice(standardPrice);
-  const formattedProPrice = formatPrice(proPrice);
-
-  
-  // Subscription purchase hooks
-  const { 
-    buyStandardSubscription, 
-    isPending: isStandardPending, 
-    isConfirming: isStandardConfirming,
-    isSuccess: isStandardSuccess,
-    error: standardError,
-    reset: resetStandard 
-  } = useBuyStandardSubscription();
-  
-  const { 
-    buyProSubscription, 
-    isPending: isProPending, 
-    isConfirming: isProConfirming,
-    isSuccess: isProSuccess,
-    error: proError,
-    reset: resetPro 
-  } = useBuyProSubscription();
-  
-  const isBuying = isStandardPending || isStandardConfirming || isProPending || isProConfirming;
 
   // Get user ID from localStorage
   useEffect(() => {
@@ -149,7 +79,68 @@ const SubscriptionPage: React.FC = () => {
     }
   }, []);
 
-  // Wallet validation is handled by useWalletValidation hook
+  // Handle Stripe checkout success/cancel
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const canceled = searchParams.get('canceled');
+    const sessionId = searchParams.get('session_id');
+    const paid = searchParams.get('paid');
+    const hasSession = Boolean(sessionId);
+
+    // If redirected with a paid flag (set after verification), just show toast and clean URL
+    if (paid === '1') {
+      showSuccessToast('Subscription activated successfully!');
+      router.replace('/subscription');
+      return;
+    }
+
+    if (hasSession) {
+      const token = getToken();
+      if (!token) {
+        showErrorToast('Authentication required. Please login again.');
+        router.replace('/login');
+        return;
+      }
+
+      // Verify the session status (handle both success and direct session_id redirects)
+      fetch(`${API_BASE_URL}/api/stripe/checkout-session?session_id=${sessionId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || `Failed to verify session (${res.status})`);
+          }
+          return res.json();
+        })
+        .then((data) => {
+          const paymentStatus = data.session?.paymentStatus || data.session?.payment_status;
+          const sessionStatus = data.session?.status;
+
+          if (paymentStatus === 'paid' || sessionStatus === 'complete') {
+            refetchSubscriptionInfo();
+            // Redirect back to subscription with a success flag to ensure toast after routing (toast shown there)
+            router.replace('/subscription?paid=1');
+          } else if (paymentStatus === 'unpaid' || paymentStatus === 'requires_payment_method' || paymentStatus === 'open') {
+            showWarningToast('Payment not completed. Please try again.');
+            router.replace('/subscription');
+          } else {
+            showErrorToast('Unable to verify payment. Please try again.');
+            router.replace('/subscription');
+          }
+        })
+        .catch((error) => {
+          console.error('Error verifying session:', error);
+          showErrorToast('Unable to verify payment. Please refresh or contact support.');
+          router.replace('/subscription');
+        });
+    } else if (canceled) {
+      showWarningToast('Payment was canceled');
+      router.replace('/subscription');
+    }
+  }, [searchParams, router, refetchSubscriptionInfo]);
 
   // Update remaining time countdown
   useEffect(() => {
@@ -202,168 +193,112 @@ const SubscriptionPage: React.FC = () => {
     return 'None';
   };
 
-  // Handle subscription purchase after approval
-  const handleBuyAfterApprove = async (subscriptionType: 'standard' | 'pro') => {
+  /**
+   * FRONTEND: Handle Stripe Checkout
+   * 
+   * This function:
+   * 1. Calls backend API to create checkout session (backend calculates price securely)
+   * 2. Redirects user to Stripe's secure payment page (PCI compliant - we never touch card data)
+   * 3. User completes payment on Stripe's servers
+   * 4. Stripe redirects back to our success/cancel URLs
+   */
+  const handleStripeCheckout = async (subscriptionType: 'standard' | 'pro') => {
     if (!userId) {
       showErrorToast('User ID not found. Please login again.');
       router.push('/login');
       return;
     }
 
-    try {
-      setSubscriptionStep('buying');
-      if (subscriptionType === 'standard') {
-        await buyStandardSubscription(userId);
-      } else {
-        await buyProSubscription(userId);
-      }
-    } catch (error: any) {
-      setSubscriptionStep('error');
-      showErrorToast(error.message || `Failed to purchase ${subscriptionType} subscription`);
-    }
-  };
-
-  // Handle subscription purchase (with approval check)
-  const handleStandardSubscription = async () => {
-    if (!isConnected || !address) {
-      showWarningToast('Please connect your wallet first');
-      router.push('/connect-wallet');
-      return;
-    }
-
-    if (!userId) {
-      showErrorToast('User ID not found. Please login again.');
-      router.push('/login');
-      return;
-    }
-
-    if (!standardPrice) {
-      showErrorToast('Standard subscription price not available');
-      return;
+    if (processingType) {
+      return; // Already processing a subscription
     }
 
     try {
-      setPendingSubscriptionType('standard');
-      setSubscriptionStep('approving');
+      setProcessingType(subscriptionType);
 
-      // Check if we need to approve (allowance is less than subscription price)
-      const needsApproval = !allowance || allowance < standardPrice;
+      // Get authentication token
+      const token = getToken();
+      if (!token) {
+        showErrorToast('Authentication required. Please login again.');
+        router.push('/login');
+        return;
+      }
 
-      if (needsApproval) {
-        // Approve USDT spending (approve slightly more than needed for gas efficiency)
-        const approveAmount = standardPrice * BigInt(2); // Approve 2x the amount
-        await approveUSDT(approveAmount);
+      
+
+      // Call backend API to create checkout session
+      // Backend handles: price calculation, secret key usage, session creation
+      const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          subscriptionType,
+        }),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        // If response is not JSON, get text
+        const text = await response.text();
+        throw new Error(`Server error: ${text || response.statusText}`);
+      }
+
+      if (!response.ok) {
+        const errorMsg = data?.error || data?.message || `Server returned ${response.status}: ${response.statusText}`;
+        console.error('Stripe API error:', errorMsg, data);
+        throw new Error(errorMsg);
+      }
+
+      // FRONTEND: Redirect user to Stripe Checkout (secure payment page)
+      // This is PCI compliant - Stripe handles all card data, we never see it
+      if (data.checkoutUrl && typeof data.checkoutUrl === 'string' && data.checkoutUrl.startsWith('http')) {
+        window.location.href = data.checkoutUrl;
+      } else if (data.sessionId && typeof data.sessionId === 'string') {
+        // If we have sessionId but no URL, construct the checkout URL
+        const checkoutUrl = `https://checkout.stripe.com/c/pay/${data.sessionId}`;
+        window.location.href = checkoutUrl;
       } else {
-        // Already approved, proceed directly to buy
-        setSubscriptionStep('buying');
-        await handleBuyAfterApprove('standard');
+        console.error('Invalid response from Stripe API:', data);
+        throw new Error('No valid checkout URL available. Please check your Stripe configuration.');
       }
     } catch (error: any) {
-      setSubscriptionStep('error');
-      showErrorToast(error.message || 'Failed to purchase standard subscription');
+      console.error('Stripe checkout error:', error);
+      showErrorToast(error.message || 'Failed to start checkout process');
+      setProcessingType(null);
     }
   };
 
-  const handleProSubscription = async () => {
-    if (!isConnected || !address) {
-      showWarningToast('Please connect your wallet first');
-      router.push('/connect-wallet');
-      return;
-    }
-
-    if (!userId) {
-      showErrorToast('User ID not found. Please login again.');
-      router.push('/login');
-      return;
-    }
-
-    if (!proPrice) {
-      showErrorToast('Pro subscription price not available');
-      return;
-    }
-
-    try {
-      setPendingSubscriptionType('pro');
-      setSubscriptionStep('approving');
-
-      // Check if we need to approve (allowance is less than subscription price)
-      const needsApproval = !allowance || allowance < proPrice;
-
-      if (needsApproval) {
-        // Approve USDT spending (approve slightly more than needed for gas efficiency)
-        const approveAmount = proPrice * BigInt(2); // Approve 2x the amount
-        await approveUSDT(approveAmount);
-      } else {
-        // Already approved, proceed directly to buy
-        setSubscriptionStep('buying');
-        await handleBuyAfterApprove('pro');
-      }
-    } catch (error: any) {
-      setSubscriptionStep('error');
-      showErrorToast(error.message || 'Failed to purchase pro subscription');
-    }
-  };
-
-  // Handle approve success - proceed to buy subscription
-  useEffect(() => {
-    if (isApproveSuccess && subscriptionStep === 'approving' && pendingSubscriptionType) {
-      setSubscriptionStep('buying');
-      handleBuyAfterApprove(pendingSubscriptionType);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isApproveSuccess, subscriptionStep, pendingSubscriptionType]);
-
-  // Handle subscription purchase success
-  useEffect(() => {
-    const succeeded = (isStandardSuccess || isProSuccess) && subscriptionStep === 'buying';
-    if (succeeded) {
-      setSubscriptionStep('success');
-      const subscriptionType = isStandardSuccess ? 'Standard' : 'Pro';
-      showSuccessToast(`${subscriptionType} subscription purchased successfully!`);
-      resetStandard();
-      resetPro();
-      resetApprove();
-      setPendingSubscriptionType(null);
-      setSubscriptionStep('idle');
-      // Refetch subscription info to update UI
-      refetchSubscriptionInfo();
-    }
-  }, [isStandardSuccess, isProSuccess, subscriptionStep, resetStandard, resetPro, resetApprove, refetchSubscriptionInfo]);
-
-  // Handle errors
-  useEffect(() => {
-    if (approveError && subscriptionStep === 'approving') {
-      setSubscriptionStep('error');
-      showErrorToast(approveError.message || 'USDT approval failed');
-      resetApprove();
-      setPendingSubscriptionType(null);
-    }
-  }, [approveError, subscriptionStep, resetApprove]);
-
-  useEffect(() => {
-    if (standardError && subscriptionStep === 'buying' && pendingSubscriptionType === 'standard') {
-      setSubscriptionStep('error');
-      showErrorToast(standardError.message || 'Failed to purchase standard subscription');
-      resetStandard();
-      setPendingSubscriptionType(null);
-    }
-  }, [standardError, subscriptionStep, pendingSubscriptionType, resetStandard]);
-
-  useEffect(() => {
-    if (proError && subscriptionStep === 'buying' && pendingSubscriptionType === 'pro') {
-      setSubscriptionStep('error');
-      showErrorToast(proError.message || 'Failed to purchase pro subscription');
-      resetPro();
-      setPendingSubscriptionType(null);
-    }
-  }, [proError, subscriptionStep, pendingSubscriptionType, resetPro]);
-
-  const isStandardProcessing = (subscriptionStep === 'approving' || subscriptionStep === 'buying') && pendingSubscriptionType === 'standard' && (isApproving || isBuying);
-  const isProProcessing = (subscriptionStep === 'approving' || subscriptionStep === 'buying') && pendingSubscriptionType === 'pro' && (isApproving || isBuying);
+  const handleStandardSubscription = () => handleStripeCheckout('standard');
+  const handleProSubscription = () => handleStripeCheckout('pro');
   
-  // Disable buttons if subscription is active
-  const isStandardDisabled = Boolean(isStandardProcessing || !userId || !isConnected || isSubscriptionActive || isLoadingSubscriptionInfo || hasAnyNFT);
-  const isProDisabled = Boolean(isProProcessing || !userId || !isConnected || isSubscriptionActive || isLoadingSubscriptionInfo || hasAnyNFT);
+  // Disable buttons if subscription is active or processing
+  const isProcessing = processingType !== null;
+  const isStandardProcessing = processingType === 'standard';
+  const isProProcessing = processingType === 'pro';
+  // Optimize: Only disable if we're sure subscription is active or user has NFT
+  // Enable buttons as soon as we know subscription is not active and user has no NFT
+  // This allows buttons to enable faster instead of waiting for all data
+  const isStandardDisabled = Boolean(
+    isProcessing || 
+    !userId || 
+    // Only disable if we've confirmed subscription is active (after loading completes)
+    (isLoadingSubscriptionInfo ? false : isSubscriptionActive) ||
+    // Only disable if we've confirmed user has NFT (after loading completes)
+    (isLoadingUserInfo ? false : hasAnyNFT)
+  );
+  const isProDisabled = Boolean(
+    isProcessing || 
+    !userId || 
+    // Only disable if we've confirmed subscription is active (after loading completes)
+    (isLoadingSubscriptionInfo ? false : isSubscriptionActive) ||
+    // Only disable if we've confirmed user has NFT (after loading completes)
+    (isLoadingUserInfo ? false : hasAnyNFT)
+  );
   return (
     <MainLayout>
       <style dangerouslySetInnerHTML={{__html: `
@@ -406,13 +341,13 @@ const SubscriptionPage: React.FC = () => {
           />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="relative z-10 max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16 py-12">
           {/* Header Section */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+            <h1 className="text-4xl sm:text-5xl xl:text-6xl fullhd:text-7xl font-bold text-white mb-4">
               Level up your access
             </h1>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+            <p className="text-lg xl:text-xl fullhd:text-2xl text-gray-400 max-w-2xl xl:max-w-3xl fullhd:max-w-4xl mx-auto">
               Access to the full features of the Intelligence Layer (coming soon), including the Top Mispricings and the AI Copilot.
             </p>
           </div>
@@ -495,7 +430,7 @@ const SubscriptionPage: React.FC = () => {
           </div>
 
           {/* Subscription Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 xl:gap-12 fullhd:gap-16 max-w-5xl xl:max-w-6xl fullhd:max-w-7xl mx-auto">
             {/* Standard Subscription */}
             <div
               className="relative rounded-xl overflow-hidden border border-gray-700/50 shadow-[0_12px_30px_rgba(0,0,0,0.55)] hover:border-gray-600/60 transition-all duration-200 p-6"
@@ -511,7 +446,7 @@ const SubscriptionPage: React.FC = () => {
                   <h3 className="text-2xl font-bold text-white mb-2">Standard Subscription</h3>
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-orange-400">
-                      {isLoadingPrices ? 'Loading...' : formattedStandardPrice}
+                      ${standardPrice}/m
                     </span>
                   </div>
                   {/* Show remaining time if Standard subscription is active */}
@@ -545,7 +480,7 @@ const SubscriptionPage: React.FC = () => {
 
                 <button
                   onClick={handleStandardSubscription}
-                  disabled={Boolean(isStandardDisabled || isWalletMismatch)}
+                  disabled={isStandardDisabled}
                   className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
@@ -608,7 +543,7 @@ const SubscriptionPage: React.FC = () => {
                   <h3 className="text-2xl font-bold text-white mb-2">Pro Subscription</h3>
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-orange-400">
-                      {isLoadingPrices ? 'Loading...' : formattedProPrice}
+                      ${proPrice}/m
                     </span>
                   </div>
                   {/* Show remaining time if Pro subscription is active */}
@@ -650,7 +585,7 @@ const SubscriptionPage: React.FC = () => {
 
                 <button
                   onClick={handleProSubscription}
-                  disabled={Boolean(isProDisabled || isWalletMismatch)}
+                  disabled={isProDisabled}
                   className="w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',

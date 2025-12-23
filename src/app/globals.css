@@ -9,6 +9,79 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-dm-sans);
+  
+  /* Custom breakpoint for 1920x1080 (Full HD) */
+  --breakpoint-fullhd: 1920px;
+}
+
+/* Responsive optimizations for 1920x1080 (Full HD) */
+@media (min-width: 1920px) {
+  /* Better spacing for large screens */
+  .fullhd\:px-16 {
+    padding-left: 4rem;
+    padding-right: 4rem;
+  }
+  
+  .fullhd\:py-16 {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+  
+  .fullhd\:max-w-\[1800px\] {
+    max-width: 1800px;
+  }
+  
+  .fullhd\:max-w-\[1600px\] {
+    max-width: 1600px;
+  }
+  
+  .fullhd\:max-w-7xl {
+    max-width: 80rem;
+  }
+  
+  .fullhd\:text-7xl {
+    font-size: 4.5rem;
+    line-height: 1;
+  }
+  
+  .fullhd\:text-6xl {
+    font-size: 3.75rem;
+    line-height: 1;
+  }
+  
+  .fullhd\:text-2xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  .fullhd\:text-xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  
+  .fullhd\:gap-16 {
+    gap: 4rem;
+  }
+  
+  .fullhd\:gap-12 {
+    gap: 3rem;
+  }
+  
+  .fullhd\:mb-16 {
+    margin-bottom: 4rem;
+  }
+  
+  .fullhd\:mb-12 {
+    margin-bottom: 3rem;
+  }
+  
+  .fullhd\:mb-6 {
+    margin-bottom: 1.5rem;
+  }
+  
+  .fullhd\:mb-4 {
+    margin-bottom: 1rem;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

@@ -124,8 +124,8 @@ export const MispricingTable: React.FC<MispricingTableProps> = ({ data = mockMis
   const edgeTrendColor = (value: number) => value >= 0 ? 'text-[#6edb8b]' : 'text-[#ef4444]';
 
   return (
-    <section className="mt-12">
-      <Heading level={2} className="mb-4 text-2xl text-white">
+    <section className="mt-12 xl:mt-16 fullhd:mt-20">
+      <Heading level={2} className="mb-4 xl:mb-6 fullhd:mb-8 text-2xl xl:text-3xl fullhd:text-4xl text-white">
         Top Mispricings
       </Heading>
 
@@ -137,7 +137,7 @@ export const MispricingTable: React.FC<MispricingTableProps> = ({ data = mockMis
                 <th
                   key={header}
                   scope="col"
-                  className={`px-4 py-3 text-left text-xs font-semibold tracking-wide uppercase ${
+                  className={`px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 text-left text-xs xl:text-sm fullhd:text-base font-semibold tracking-wide uppercase ${
                     index === 0 ? 'bg-orange-600' : ''
                   }`}
                 >
@@ -147,20 +147,20 @@ export const MispricingTable: React.FC<MispricingTableProps> = ({ data = mockMis
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-700 text-sm text-gray-200">
+          <tbody className="divide-y divide-gray-700 text-sm xl:text-base fullhd:text-lg text-gray-200">
             {data.map((row, idx) => (
               <tr
                 key={row.id}
                 className="hover:bg-white/5 transition-colors"
                 style={{ backgroundColor: idx % 2 === 0 ? '#000000' : '#1E2022' }}
               >
-                <td className="px-4 py-3 whitespace-nowrap font-medium text-white">{row.marketQuestion}</td>
-                <td className="px-4 py-3 whitespace-nowrap font-semibold text-gray-100">{formatPercent(row.marketOdds)}</td>
-                <td className="px-4 py-3 whitespace-nowrap font-semibold text-gray-100">{formatPercent(row.polynadoFairOdds)}</td>
-                <td className={`px-4 py-3 whitespace-nowrap font-semibold ${edgeTrendColor(row.edgeTrend24h)}`}>
+                <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-medium text-white">{row.marketQuestion}</td>
+                <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold text-gray-100">{formatPercent(row.marketOdds)}</td>
+                <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold text-gray-100">{formatPercent(row.polynadoFairOdds)}</td>
+                <td className={`px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold ${edgeTrendColor(row.edgeTrend24h)}`}>
                   {formatEdgeTrend(row.edgeTrend24h)}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
                   <MiniLineGraph 
                     data={row.edgeData} 
                     isPositive={row.edgeTrend24h >= 0} 

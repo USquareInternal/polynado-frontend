@@ -110,43 +110,43 @@ const PolynodoChatbot: React.FC = () => {
         </div>
 
         {/* Header */}
-        <div className="bg-[#1E2022]/80 backdrop-blur-sm border-b border-gray-700/50 px-6 py-4 shadow-lg relative z-10">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="bg-[#1E2022]/80 backdrop-blur-sm border-b border-gray-700/50 px-6 xl:px-12 fullhd:px-16 py-4 xl:py-6 fullhd:py-8 shadow-lg relative z-10">
+          <div className="max-w-6xl xl:max-w-[1600px] fullhd:max-w-[1800px] mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3 xl:gap-4 fullhd:gap-6">
               <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                className="w-10 h-10 xl:w-12 xl:h-12 fullhd:w-14 fullhd:h-14 rounded-lg flex items-center justify-center"
                 style={{
                   backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
                   boxShadow: '0 0 15px rgba(219, 122, 35, 0.4)',
                 }}
               >
-                <LineChartOutlined className="text-xl text-white" />
+                <LineChartOutlined className="text-xl xl:text-2xl fullhd:text-3xl text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Polynado AI</h1>
-                <p className="text-sm text-gray-400">Market Intelligence Assistant</p>
+                <h1 className="text-xl xl:text-2xl fullhd:text-3xl font-bold text-white">Polynado AI</h1>
+                <p className="text-sm xl:text-base fullhd:text-lg text-gray-400">Market Intelligence Assistant</p>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-green-400 font-medium">Online</span>
+            <div className="hidden sm:flex items-center gap-2 xl:gap-3 fullhd:gap-4 px-3 xl:px-4 fullhd:px-5 py-1.5 xl:py-2 fullhd:py-2.5 bg-green-500/10 border border-green-500/30 rounded-full">
+              <div className="w-2 h-2 xl:w-2.5 xl:h-2.5 fullhd:w-3 fullhd:h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs xl:text-sm fullhd:text-base text-green-400 font-medium">Online</span>
             </div>
           </div>
         </div>
 
         {/* Disclaimer Banner */}
-        <div className="bg-amber-500/10 border-b border-amber-500/30 px-6 py-3 relative z-10">
-          <div className="max-w-6xl mx-auto flex items-center gap-3">
-            <ExclamationCircleOutlined className="text-amber-500 flex-shrink-0" />
-            <p className="text-sm text-amber-200">
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-6 xl:px-12 fullhd:px-16 py-3 xl:py-4 fullhd:py-5 relative z-10">
+          <div className="max-w-6xl xl:max-w-[1600px] fullhd:max-w-[1800px] mx-auto flex items-center gap-3 xl:gap-4 fullhd:gap-6">
+            <ExclamationCircleOutlined className="text-amber-500 flex-shrink-0 text-base xl:text-lg fullhd:text-xl" />
+            <p className="text-sm xl:text-base fullhd:text-lg text-amber-200">
               <strong>Disclaimer:</strong> This is not financial advice. All market insights are for informational purposes only. Trade at your own risk.
             </p>
           </div>
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 relative z-10">
-          <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 xl:px-12 fullhd:px-16 py-6 xl:py-8 fullhd:py-10 relative z-10">
+          <div className="max-w-4xl xl:max-w-5xl fullhd:max-w-6xl mx-auto space-y-6 xl:space-y-8 fullhd:space-y-10">
             {messages.map((message) => (
               <div
                 key={message.id}

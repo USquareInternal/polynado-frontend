@@ -18,6 +18,7 @@ import {
   useUserInfo,
 } from '@/utils/nftContract';
 import { showSuccessAlert,showFailedAlert } from "@/utils/SweetAlertUtils";
+import { isUserRejection, showRejectionToast } from '@/utils/toast';
 import { useWalletValidation } from '@/hooks/useWalletValidation';
 import { getUserData } from '@/services/authService';
 
@@ -221,6 +222,7 @@ const NFTMintDashboard: React.FC = () => {
     (mintingStep === 'approving' || mintingStep === 'minting' || isApproving || isMinting);
 
   // Standard button: disabled if Pro NFT Minted OR Standard NFT is minted
+  // Enable button as soon as critical data is available, don't wait for all status checks
   const standardButtonEnabled =
     isConnected &&
     !whitelistBlockedStandard &&
@@ -228,11 +230,15 @@ const NFTMintDashboard: React.FC = () => {
     standardMintPrice !== undefined &&
     standardMintPrice !== null &&
     mintingWindowOpenStandard &&
-    !isStatusLoading &&
+    // Only wait for critical loading states: user info (to check NFTs) and mint price
+    !isLoadingUserInfo &&
+    !isLoadingStandardCollection &&
+    // Don't wait for other status checks - they can load in background
     !hasStandardNFT &&
     !hasProNFT; // Disable if Pro NFT Minted
 
   // Pro button: disabled only if Pro NFT Minted (can upgrade from Standard)
+  // Enable button as soon as critical data is available, don't wait for all status checks
   const proButtonEnabled =
     isConnected &&
     !whitelistBlockedPro &&
@@ -240,7 +246,10 @@ const NFTMintDashboard: React.FC = () => {
     proMintPrice !== undefined &&
     proMintPrice !== null &&
     mintingWindowOpenPro &&
-    !isStatusLoading &&
+    // Only wait for critical loading states: user info (to check NFTs) and mint price
+    !isLoadingUserInfo &&
+    !isLoadingProCollection &&
+    // Don't wait for other status checks - they can load in background
     !hasProNFT; // Only disable if Pro NFT Minted (Standard NFT doesn't block Pro)
 
   // Handle approve success - proceed to mint
@@ -284,14 +293,27 @@ const NFTMintDashboard: React.FC = () => {
   useEffect(() => {
     if (approveError) {
       setMintingStep('error');
-      setTierError(pendingCollectionId, approveError.message || 'Approval failed');
+      // Check if user rejected the transaction
+      if (isUserRejection(approveError)) {
+        showRejectionToast();
+        setTierError(pendingCollectionId, null); // Clear error message for rejection
+      } else {
+        setTierError(pendingCollectionId, approveError.message || 'Approval failed');
+      }
     }
     if (publicMintError || whitelistMintError) {
       setMintingStep('error');
-      setTierError(
-        pendingCollectionId,
-        publicMintError?.message || whitelistMintError?.message || 'Minting failed'
-      );
+      const mintError = publicMintError || whitelistMintError;
+      // Check if user rejected the transaction
+      if (mintError && isUserRejection(mintError)) {
+        showRejectionToast();
+        setTierError(pendingCollectionId, null); // Clear error message for rejection
+      } else {
+        setTierError(
+          pendingCollectionId,
+          publicMintError?.message || whitelistMintError?.message || 'Minting failed'
+        );
+      }
     }
   }, [approveError, publicMintError, whitelistMintError, pendingCollectionId]);
 
@@ -304,10 +326,16 @@ const NFTMintDashboard: React.FC = () => {
       }
     } catch (error: any) {
       setMintingStep('error');
-      setTierError(collectionId, error?.message || 'Minting failed');
-      showFailedAlert(
-        `Something Went Wrong. Please try again.`,
-    );
+      // Check if user rejected the transaction
+      if (isUserRejection(error)) {
+        showRejectionToast();
+        setTierError(collectionId, null); // Clear error message for rejection
+      } else {
+        setTierError(collectionId, error?.message || 'Minting failed');
+        showFailedAlert(
+          `Something Went Wrong. Please try again.`,
+      );
+      }
     }
   };
 
@@ -377,6 +405,13 @@ const NFTMintDashboard: React.FC = () => {
       }
     } catch (error: any) {
       setMintingStep('error');
+      // Check if user rejected the transaction
+      if (isUserRejection(error)) {
+        showRejectionToast();
+        setTierError(collectionId, null); // Clear error message for rejection
+        return;
+      }
+      
       // Parse error message for better user feedback
       const errorMsg = error?.message || error?.shortMessage || 'Transaction failed';
       if (errorMsg.includes('MintPriceNotSet')) {
@@ -396,22 +431,22 @@ const NFTMintDashboard: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto px-4 py-8">
+    <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16 py-8 xl:py-12 fullhd:py-16 max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px]">
       {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+      <div className="mb-8 xl:mb-12 fullhd:mb-16">
+        <h1 className="text-3xl sm:text-4xl xl:text-5xl fullhd:text-6xl font-bold text-white mb-3 xl:mb-4 fullhd:mb-6">
           Mint Your Polynado NFT
         </h1>
-        <p className="text-base sm:text-lg text-gray-400 ">
+        <p className="text-base sm:text-lg xl:text-xl fullhd:text-2xl text-gray-400 max-w-4xl xl:max-w-5xl fullhd:max-w-6xl">
           Unlock permanent Pro access to Polynado's market intelligence platform. Choose between Standard or Pro tier NFTs to gain lifetime access to advanced analytics, AI-powered insights, and exclusive features.
         </p>
       </div>
 
       {/* NFT Tiers Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 xl:gap-12 fullhd:gap-16 mb-8 xl:mb-12 fullhd:mb-16">
         {/* STANDARD TIER */}
         <div
-          className="relative rounded-xl overflow-hidden p-6"
+          className="relative rounded-xl overflow-hidden p-6 flex flex-col h-full"
           style={{
             borderColor: '#6C6C6C',
             borderWidth: '1px',
@@ -419,14 +454,14 @@ const NFTMintDashboard: React.FC = () => {
           }}
         >
           {/* 3D Cube Image Container */}
-          <div className="relative flex justify-center items-center mb-6">
+          <div className="relative flex justify-center items-center mb-6" style={{ minHeight: '400px' }}>
             <div className="relative">
               {/* Cube Image */}
               <img
                 src="/image 32.png"
                 alt="Standard Tier NFT"
                 className=" object-contain relative z-10"
-                style={{ width: '300px', height: '300px',marginTop:75,marginBottom:40 }}
+                style={{ width: '300px', height: '300px' }}
               />
             </div>
           </div>
@@ -440,7 +475,7 @@ const NFTMintDashboard: React.FC = () => {
           </div>
 
           {/* Supply Information */}
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1">
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-white mb-1">Supply Remaining</p>
@@ -510,7 +545,7 @@ const NFTMintDashboard: React.FC = () => {
 
         {/* PRO TIER */}
         <div
-          className="relative rounded-xl overflow-hidden p-6"
+          className="relative rounded-xl overflow-hidden p-6 flex flex-col h-full"
           style={{
             borderColor: '#6C6C6C',
             borderWidth: '1px',
@@ -518,7 +553,7 @@ const NFTMintDashboard: React.FC = () => {
           }}
         >
           {/* 3D Cube Video Container */}
-          <div className="relative flex justify-center items-center mb-6">
+          <div className="relative flex justify-center items-center mb-6" style={{ minHeight: '400px' }}>
             <div className="relative">
               {/* Cube Video */}
               <video
@@ -535,15 +570,15 @@ const NFTMintDashboard: React.FC = () => {
           </div>
 
           {/* Title with Price */}
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-white">PRO TIER</h3>
-            <span className="text-xl font-bold text-orange-400">
+          <div className="flex justify-between items-center mb-6 xl:mb-8 fullhd:mb-10">
+            <h3 className="text-xl xl:text-2xl fullhd:text-3xl font-bold text-white">PRO TIER</h3>
+            <span className="text-xl xl:text-2xl fullhd:text-3xl font-bold text-orange-400">
               {isLoadingProCollection ? '...' : formattedProPrice}
             </span>
           </div>
 
           {/* Supply Information */}
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1">
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-white mb-1">Supply Remaining</p>

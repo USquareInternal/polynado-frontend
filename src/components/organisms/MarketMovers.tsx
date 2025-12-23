@@ -78,7 +78,7 @@ const mockMarkets = [
 export const MarketMovers: React.FC = () => {
 
     const renderMarketCards = () => (
-        <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-2 fullhd:grid-cols-2 gap-6 xl:gap-8 fullhd:gap-10">
             {mockMarkets.map((market, index) => (
                 <MarketCard key={index} {...market} />
             ))}
@@ -102,10 +102,10 @@ export const MarketMovers: React.FC = () => {
     );
 
     return (
-        <section className="mt-8">
+        <section className="mt-8 xl:mt-12 fullhd:mt-16">
             <Heading
                 level={2}
-                className="text-white font-medium mb-6"
+                className="text-white font-medium mb-6 xl:mb-8 fullhd:mb-10 text-xl sm:text-2xl xl:text-3xl fullhd:text-4xl"
                 style={{
                     fontSize: '29.674px',
                     fontFamily: 'Inter',
@@ -115,7 +115,7 @@ export const MarketMovers: React.FC = () => {
             </Heading>
 
             {/* Main Content Grid: 12-column grid for 67/33 (8/4) split */}
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-12 gap-6 xl:gap-8 fullhd:gap-10">
 
                 {/* 1. Market Cards (Left Side) */}
                 {renderMarketCards()}
@@ -123,13 +123,13 @@ export const MarketMovers: React.FC = () => {
                 {/* 2. Market Chart & Trending Sidebar (Right Side) */}
                 <aside className="col-span-12 md:col-span-4 pt-0 flex flex-col">
 
-                    <div className="mb-6 h-48 md:h-52">
+                    <div className="mb-6 xl:mb-8 fullhd:mb-10 h-48 md:h-52 xl:h-64 fullhd:h-72">
                         <MarketActivityChart />
                     </div>
 
                     <Heading
                         level={2}
-                        className="text-white font-medium mb-6"
+                        className="text-white font-medium mb-6 xl:mb-8 fullhd:mb-10 text-xl sm:text-2xl xl:text-3xl fullhd:text-4xl"
                         style={{
                             fontSize: '29.674px',
                             fontFamily: 'Inter',
@@ -138,7 +138,7 @@ export const MarketMovers: React.FC = () => {
                         What's Trending ?
                     </Heading>
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-2 xl:gap-3 fullhd:gap-4">
                         {mockTrends.map((trend, index) => (
                             <TrendBadge
                                 key={index}

@@ -21,6 +21,7 @@ import { showSuccessAlert,showFailedAlert } from "@/utils/SweetAlertUtils";
 import { isUserRejection, showRejectionToast } from '@/utils/toast';
 import { useWalletValidation } from '@/hooks/useWalletValidation';
 import { getUserData } from '@/services/authService';
+import LoaderBar from '@/components/atoms/LoaderBar';
 
 const NFTMintDashboard: React.FC = () => {
   const { isConnected, address } = useAccount();
@@ -28,14 +29,16 @@ const NFTMintDashboard: React.FC = () => {
   const [standardError, setStandardError] = useState<string | null>(null);
   const [proError, setProError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [authUserData, setAuthUserData] = useState<any>(null);
   
   // Validate wallet address mapping
   useWalletValidation();
 
-  // Get user ID from localStorage (from login response)
+  // Get user ID and auth user data from localStorage (from login response)
   useEffect(() => {
     const userData = getUserData();
     if (userData) {
+      setAuthUserData(userData);
       // Use userId or reffralId as userId
       const id = (userData as any).userId || (userData as any).reffralId;
       if (id) {
@@ -60,16 +63,23 @@ const NFTMintDashboard: React.FC = () => {
   // Get user info to check which NFTs they've minted
   const { userInfo, isLoading: isLoadingUserInfo, refetch: refetchUserInfo } = useUserInfo(userId || undefined);
   
+  // Auth fallback flags from login response
+  const authHasStandardNFT = authUserData?.isMintedStandardNFT === true;
+  const authHasProNFT = authUserData?.isMintedProNFT === true;
+
   // Check which NFTs user has minted from mintedColls (mapped to collectionIds)
   // Handle both bigint and number types
-  const hasStandardNFT = userInfo?.collectionIds?.some(id => {
+  const hasStandardNFTOnChain = userInfo?.collectionIds?.some(id => {
     const numId = typeof id === 'bigint' ? Number(id) : Number(id);
     return numId === 1;
   }) ?? false;
-  const hasProNFT = userInfo?.collectionIds?.some(id => {
+  const hasProNFTOnChain = userInfo?.collectionIds?.some(id => {
     const numId = typeof id === 'bigint' ? Number(id) : Number(id);
     return numId === 2;
   }) ?? false;
+
+  const hasStandardNFT = hasStandardNFTOnChain || authHasStandardNFT;
+  const hasProNFT = hasProNFTOnChain || authHasProNFT;
 
 
   // Check USDT allowance
@@ -252,6 +262,14 @@ const NFTMintDashboard: React.FC = () => {
     // Don't wait for other status checks - they can load in background
     !hasProNFT; // Only disable if Pro NFT Minted (Standard NFT doesn't block Pro)
 
+  const showLoader =
+    isStatusLoading ||
+    isLoadingUserInfo ||
+    isStandardProcessing ||
+    isProProcessing ||
+    mintingStep === 'approving' ||
+    mintingStep === 'minting';
+
   // Handle approve success - proceed to mint
   useEffect(() => {
     if (isApproveSuccess && mintingStep === 'approving') {
@@ -432,6 +450,7 @@ const NFTMintDashboard: React.FC = () => {
 
   return (
     <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16 py-8 xl:py-12 fullhd:py-16 max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px]">
+      <LoaderBar visible={showLoader} />
       {/* Header Section */}
       <div className="mb-8 xl:mb-12 fullhd:mb-16">
         <h1 className="text-3xl sm:text-4xl xl:text-5xl fullhd:text-6xl font-bold text-white mb-3 xl:mb-4 fullhd:mb-6">

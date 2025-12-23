@@ -6,7 +6,7 @@ import { Heading } from '@/components/atoms/Heading';
 import { getToken } from '@/services/authService';
 import { WalletOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 
-const API_BASE_URL = 'https://polynado-backend.onrender.com';
+export const API_BASE_URL = 'https://polynado-backend.onrender.com';
 
 interface Withdrawal {
   _id: string;

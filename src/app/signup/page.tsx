@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { verifyReferralCode, signup, storeToken, storeUserData, getUserData } from '@/services/authService';
-import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
+import { showSuccessToast, showErrorToast, showWarningToast, isUserRejection, showRejectionToast } from '@/utils/toast';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useJoinPolynado } from '@/utils/nftContract';
@@ -648,7 +648,12 @@ const SignupPage: React.FC = () => {
   useEffect(() => {
     if (joinError && step === 4) {
       console.error("Transaction error:", joinError);
-      showErrorToast(joinError.message || 'Failed to join Polynado. Please try again.');
+      // Check if user rejected the transaction
+      if (isUserRejection(joinError)) {
+        showRejectionToast();
+      } else {
+        showErrorToast(joinError.message || 'Failed to join Polynado. Please try again.');
+      }
       resetJoin();
     }
   }, [joinError, step, resetJoin]);
@@ -699,7 +704,12 @@ const SignupPage: React.FC = () => {
       console.log("joinPolynado called - waiting for transaction hash...");
     } catch (err: any) {
       console.error('Error joining Polynado:', err);
-      showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
+      // Check if user rejected the transaction
+      if (isUserRejection(err)) {
+        showRejectionToast();
+      } else {
+        showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
+      }
       resetJoin();
     }
   };

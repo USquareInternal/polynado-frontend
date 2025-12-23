@@ -300,10 +300,9 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
       }
     };
 
-    if (!isHomePage) {
-      fetchReferredUsers();
-    }
-  }, [isHomePage]);
+    // Always fetch data to display the same stats on both home page and referral page
+    fetchReferredUsers();
+  }, []);
 
   return (
     <section className="mt-12">

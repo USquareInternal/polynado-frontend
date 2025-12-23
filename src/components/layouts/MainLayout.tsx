@@ -50,8 +50,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
                 {/* 3. Page Content */}
                 {/* The main content now starts immediately below the header's height (h-16) */}
-                <main className="flex-1" style={{maxWidth:"98%", margin:"50px auto 10px",width:"98%"}}>
-                    {children}
+                {/* Responsive: 98% on mobile/tablet, optimized for 1920x1080 */}
+                <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16" 
+                      style={{
+                        maxWidth: "98%", 
+                        margin: "50px auto 10px",
+                        width: "98%"
+                      }}>
+                    <div className="max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px] mx-auto">
+                        {children}
+                    </div>
                 </main>
                 <Footer />
             </div>

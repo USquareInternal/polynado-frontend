@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { showWarningToast, showSuccessToast, showErrorToast } from '@/utils/toast';
+import { showWarningToast, showSuccessToast, showErrorToast, isUserRejection, showRejectionToast } from '@/utils/toast';
 import { getToken, getUserData } from '@/services/authService';
 import { useJoinPolynado } from '@/utils/nftContract';
 
@@ -14,6 +14,8 @@ const ConnectWalletPage: React.FC = () => {
   const [hasJoined, setHasJoined] = useState(false);
   const [transactionTimeout, setTransactionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [noHashTimeout, setNoHashTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [walletToastShown, setWalletToastShown] = useState(false);
+  const WALLET_TOAST_KEY = 'walletConnectedToastShown';
 
   // Check authentication and redirect if needed
   useEffect(() => {
@@ -24,6 +26,10 @@ const ConnectWalletPage: React.FC = () => {
       router.push('/login');
       return;
     }
+
+    // Load whether we've already shown the wallet-connected toast
+    const shown = typeof window !== 'undefined' ? localStorage.getItem(WALLET_TOAST_KEY) === 'true' : false;
+    setWalletToastShown(shown);
 
     // Redirect to dashboard if already connected and joined (for new users)
     const isNewUser = localStorage.getItem('isNewUser') === 'true';
@@ -84,7 +90,13 @@ const ConnectWalletPage: React.FC = () => {
         clearTimeout(transactionTimeout);
         setTransactionTimeout(null);
       }
-      showErrorToast(error.message || 'Failed to join Polynado. Please try again.');
+      
+      // Check if user rejected the transaction
+      if (isUserRejection(error)) {
+        showRejectionToast();
+      } else {
+        showErrorToast(error.message || 'Failed to join Polynado. Please try again.');
+      }
       reset();
     }
   }, [error, reset, transactionTimeout]);
@@ -197,12 +209,24 @@ const ConnectWalletPage: React.FC = () => {
         console.log("joinPolynado called - waiting for transaction hash...");
       } catch (err: any) {
         console.error('Error joining Polynado:', err);
-        showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
+        // Check if user rejected the transaction
+        if (isUserRejection(err)) {
+          showRejectionToast();
+        } else {
+          showErrorToast(err.message || 'Failed to join Polynado. Please try again.');
+        }
         reset();
       }
     } else {
       // Existing user from login - just redirect (no contract call)
-      showSuccessToast('Wallet connected successfully!');
+      // Only show the toast the first time to avoid showing on refresh
+      if (!walletToastShown) {
+        showSuccessToast('Wallet connected successfully!');
+        setWalletToastShown(true);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(WALLET_TOAST_KEY, 'true');
+        }
+      }
       setTimeout(() => {
         router.push('/');
       }, 500);

@@ -76,11 +76,15 @@ export const Web3ModalProvider: React.FC<Web3ModalProviderProps> = ({
     // it could also cause a mismatch. Using a static public path is generally safe.
     return (
       <img
-        src={"/polynado.svg"}
+        src={"/image 7.svg"}
         width={size}
         height={size}
         style={{ borderRadius: size }}
         alt="Custom Avatar"
+        onError={(e) => {
+          // Fallback if image fails to load
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
       />
     );
   };

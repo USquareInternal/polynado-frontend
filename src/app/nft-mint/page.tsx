@@ -449,8 +449,21 @@ const NFTMintDashboard: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16 py-8 xl:py-12 fullhd:py-16 max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px]">
-      <Spinner visible={showLoader} size="lg" fullScreen={true} />
+    <div className="mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 fullhd:px-16 py-8 xl:py-12 fullhd:py-16 max-w-7xl xl:max-w-[1600px] fullhd:max-w-[1800px] relative">
+      {showLoader && (
+        <div 
+          className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/70"
+          style={{ 
+            pointerEvents: 'all',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+        >
+          <Spinner visible={showLoader} size="lg" />
+        </div>
+      )}
       {/* Header Section */}
       <div className="mb-8 xl:mb-12 fullhd:mb-16">
         <h1 className="text-3xl sm:text-4xl xl:text-5xl fullhd:text-6xl font-bold text-white mb-3 xl:mb-4 fullhd:mb-6">
@@ -486,7 +499,7 @@ const NFTMintDashboard: React.FC = () => {
           </div>
 
           {/* Title with Price */}
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-6" style={{ minHeight: '32px' }}>
             <h3 className="text-xl font-bold text-white">STANDARD TIER</h3>
             <span className="text-xl font-bold text-orange-400">
               {isLoadingStandardCollection ? '...' : formattedStandardPrice}
@@ -589,9 +602,9 @@ const NFTMintDashboard: React.FC = () => {
           </div>
 
           {/* Title with Price */}
-          <div className="flex justify-between items-center mb-6 xl:mb-8 fullhd:mb-10">
-            <h3 className="text-xl xl:text-2xl fullhd:text-3xl font-bold text-white">PRO TIER</h3>
-            <span className="text-xl xl:text-2xl fullhd:text-3xl font-bold text-orange-400">
+          <div className="flex justify-between items-center mb-6" style={{ minHeight: '32px' }}>
+            <h3 className="text-xl font-bold text-white">PRO TIER</h3>
+            <span className="text-xl font-bold text-orange-400">
               {isLoadingProCollection ? '...' : formattedProPrice}
             </span>
           </div>

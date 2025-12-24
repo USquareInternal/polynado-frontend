@@ -1,9 +1,11 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { Header } from '@/components/organisms/Header';
 import { Footer } from '@/components/atoms/Footer';
 import { useAccount } from 'wagmi';
+import { SideSnackbar } from '@/components/atoms/SideSnackbar';
+import { setWalletMismatchSnackbar, initializeWalletMismatchSnackbar } from '@/hooks/useWalletValidation';
 
 interface MainLayoutProps {
     children: React.ReactNode;
@@ -12,10 +14,17 @@ interface MainLayoutProps {
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { isConnected, address } = useAccount();
+    const [snackbarVisible, setSnackbarVisible] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
     const handleConnect = () => {}; // Wagmi handles connection
     const handleDisconnect = () => {}; // Wagmi handles disconnection
+
+    // Initialize snackbar state
+    useEffect(() => {
+        initializeWalletMismatchSnackbar(setSnackbarVisible, setSnackbarMessage);
+    }, []);
 
     // The 'lg' breakpoint matches the desktop view where the sidebar is always visible.
     // The 'pl-20' matches the desktopWidthClass ('lg:w-20') in Sidebar.tsx.
@@ -63,6 +72,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </main>
                 <Footer />
             </div>
+            
+            {/* Side Snackbar for Wallet Mismatch */}
+            <SideSnackbar
+                visible={snackbarVisible}
+                message={snackbarMessage}
+                type="error"
+                onClose={() => setWalletMismatchSnackbar(false)}
+            />
         </div>
     );
 };

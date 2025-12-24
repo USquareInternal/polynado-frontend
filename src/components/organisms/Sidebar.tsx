@@ -26,6 +26,7 @@ interface SidebarProps {
 const CUSTOM_LOGO_PATH = '/path/to/your/logo/icon.svg';
 
 const navItems = [
+    { name: 'Market Screener', href: '/market-screener', icon: LineChartOutlined },
     { name: 'NFT Mint', href: '/nft-mint', icon: GiftOutlined },
     { name: 'Referral', href: '/referral', icon: TeamOutlined },
     { name: 'Subscription', href: '/subscription', icon: CrownOutlined },

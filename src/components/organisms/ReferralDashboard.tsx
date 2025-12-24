@@ -8,6 +8,7 @@ import { QRCodeSection } from '@/components/molecules/QRCodeSection';
 import { RewardCard } from '@/components/molecules/RewardCard';
 import { Heading } from '@/components/atoms/Heading';
 import { getToken, getUserData } from '@/services/authService';
+import Spinner from '@/components/atoms/Spinner';
 
 // Define the props for the component
 interface ReferralDashboardProps {
@@ -305,7 +306,22 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
   }, []);
 
   return (
-    <section className="mt-12">
+    <section className="mt-12 relative">
+      {/* Loader overlay - only show on referral page (not home page) */}
+      {!isHomePage && isLoading && (
+        <div 
+          className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/70"
+          style={{ 
+            pointerEvents: 'all',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+        >
+          <Spinner visible={isLoading} size="lg" />
+        </div>
+      )}
       {/* Header (Always Visible) */}
       <Heading level={2} className="mb-1 text-2xl text-white">
         Referral Dashboard

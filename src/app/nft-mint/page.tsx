@@ -66,7 +66,7 @@ const NFTMintDashboard: React.FC = () => {
   // Auth fallback flags from login response
   const authHasStandardNFT = authUserData?.isMintedStandardNFT === true;
   const authHasProNFT = authUserData?.isMintedProNFT === true;
-
+  
   // Check which NFTs user has minted from mintedColls (mapped to collectionIds)
   // Handle both bigint and number types
   const hasStandardNFTOnChain = userInfo?.collectionIds?.some(id => {
@@ -316,7 +316,7 @@ const NFTMintDashboard: React.FC = () => {
         showRejectionToast();
         setTierError(pendingCollectionId, null); // Clear error message for rejection
       } else {
-        setTierError(pendingCollectionId, approveError.message || 'Approval failed');
+      setTierError(pendingCollectionId, approveError.message || 'Approval failed');
       }
     }
     if (publicMintError || whitelistMintError) {
@@ -327,10 +327,10 @@ const NFTMintDashboard: React.FC = () => {
         showRejectionToast();
         setTierError(pendingCollectionId, null); // Clear error message for rejection
       } else {
-        setTierError(
-          pendingCollectionId,
-          publicMintError?.message || whitelistMintError?.message || 'Minting failed'
-        );
+      setTierError(
+        pendingCollectionId,
+        publicMintError?.message || whitelistMintError?.message || 'Minting failed'
+      );
       }
     }
   }, [approveError, publicMintError, whitelistMintError, pendingCollectionId]);
@@ -349,10 +349,10 @@ const NFTMintDashboard: React.FC = () => {
         showRejectionToast();
         setTierError(collectionId, null); // Clear error message for rejection
       } else {
-        setTierError(collectionId, error?.message || 'Minting failed');
-        showFailedAlert(
-          `Something Went Wrong. Please try again.`,
-      );
+      setTierError(collectionId, error?.message || 'Minting failed');
+      showFailedAlert(
+        `Something Went Wrong. Please try again.`,
+    );
       }
     }
   };

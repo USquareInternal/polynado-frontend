@@ -69,14 +69,15 @@ const NFTMintDashboard: React.FC = () => {
   
   // Check which NFTs user has minted from mintedColls (mapped to collectionIds)
   // Handle both bigint and number types
-  const hasStandardNFTOnChain = userInfo?.collectionIds?.some(id => {
+  const collectionIds = Array.isArray(userInfo?.collectionIds) ? userInfo.collectionIds : [];
+  const hasStandardNFTOnChain = collectionIds.some(id => {
     const numId = typeof id === 'bigint' ? Number(id) : Number(id);
     return numId === 1;
-  }) ?? false;
-  const hasProNFTOnChain = userInfo?.collectionIds?.some(id => {
+  });
+  const hasProNFTOnChain = collectionIds.some(id => {
     const numId = typeof id === 'bigint' ? Number(id) : Number(id);
     return numId === 2;
-  }) ?? false;
+  });
 
   const hasStandardNFT = hasStandardNFTOnChain || authHasStandardNFT;
   const hasProNFT = hasProNFTOnChain || authHasProNFT;

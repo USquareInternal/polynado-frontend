@@ -609,8 +609,8 @@ export const useUserInfo = (userId?: string) => {
 
   // Parse the new getUserData response structure:
   // userId (string), referrerId (string), email (string), 
-  // referralRewards (uint256), nftRewards (uint256), subRewards (uint256),
-  // totalRefs (uint256), nftRefs (uint256), subRefs (uint256),
+  // referralRewards (uint256), nftRewards (uint256),
+  // totalRefs (uint256), nftRefs (uint256),
   // minted (bool), mintedColls (uint256[])
   const tuple = data as
     | {
@@ -619,21 +619,17 @@ export const useUserInfo = (userId?: string) => {
         2?: string;  // email
         3?: bigint;  // referralRewards
         4?: bigint;  // nftRewards
-        5?: bigint;  // subRewards
-        6?: bigint;  // totalRefs
-        7?: bigint;  // nftRefs
-        8?: bigint;  // subRefs
-        9?: boolean; // minted
-        10?: bigint[]; // mintedColls
+        5?: bigint;  // totalRefs
+        6?: bigint;  // nftRefs
+        7?: boolean; // minted
+        8?: bigint[]; // mintedColls
         userId?: string;
         referrerId?: string;
         email?: string;
         referralRewards?: bigint;
         nftRewards?: bigint;
-        subRewards?: bigint;
         totalRefs?: bigint;
         nftRefs?: bigint;
-        subRefs?: bigint;
         minted?: boolean;
         mintedColls?: bigint[];
       }
@@ -646,13 +642,11 @@ export const useUserInfo = (userId?: string) => {
         email: tuple.email ?? tuple[2],
         referralRewards: tuple.referralRewards ?? tuple[3],
         nftRewards: tuple.nftRewards ?? tuple[4],
-        subRewards: tuple.subRewards ?? tuple[5],
-        totalRefs: tuple.totalRefs ?? tuple[6],
-        nftRefs: tuple.nftRefs ?? tuple[7],
-        subRefs: tuple.subRefs ?? tuple[8],
-        isMinted: tuple.minted ?? tuple[9] ?? false,
+        totalRefs: tuple.totalRefs ?? tuple[5],
+        nftRefs: tuple.nftRefs ?? tuple[6],
+        isMinted: tuple.minted ?? tuple[7] ?? false,
         // Map mintedColls to collectionIds for backward compatibility
-        collectionIds: tuple.mintedColls ?? tuple[10] ?? [],
+        collectionIds: tuple.mintedColls ?? tuple[8] ?? [],
       }
     : undefined;
 

@@ -468,10 +468,10 @@ const NFTMintDashboard: React.FC = () => {
       {/* Header Section */}
       <div className="mb-8 xl:mb-12 fullhd:mb-16">
         <h1 className="text-3xl sm:text-4xl xl:text-5xl fullhd:text-6xl font-bold text-white mb-3 xl:mb-4 fullhd:mb-6">
-          Mint Your Polynado NFT
+        Lifetime Pro Access. One Mint.
         </h1>
         <p className="text-base sm:text-lg xl:text-xl fullhd:text-2xl text-gray-400 max-w-4xl xl:max-w-5xl fullhd:max-w-6xl">
-          Unlock permanent Pro access to Polynado's market intelligence platform. Choose between Standard or Pro tier NFTs to gain lifetime access to advanced analytics, AI-powered insights, and exclusive features.
+        Mint a Polynado NFT and lock in lifetime Pro access. No subscriptions, no renewals, no bs. Choose Standard or Pro tier to unlock AI-powered market intelligence that spots opportunities 18-36 hours before everyone else. This isn't a rental. This is ownership.
         </p>
       </div>
 
@@ -692,7 +692,7 @@ const NFTMintDashboard: React.FC = () => {
         {/* Title with icon */}
         <div className="flex items-center gap-2 mb-6">
           <SettingOutlined className="text-orange-400 text-xl" />
-          <h3 className="text-xl font-bold text-white">Common features</h3>
+          <h3 className="text-xl font-bold text-white">Your Access Includes:</h3>
         </div>
 
         {/* Features List */}

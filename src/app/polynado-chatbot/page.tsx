@@ -9,6 +9,7 @@ import {
   LineChartOutlined 
 } from '@ant-design/icons';
 import { useWalletValidation } from '@/hooks/useWalletValidation';
+import { getToken } from '@/services/authService';
 
 const PolynodoChatbot: React.FC = () => {
   // Validate wallet address mapping
@@ -43,21 +44,57 @@ const PolynodoChatbot: React.FC = () => {
       timestamp: new Date()
     };
 
+    const questionText = input.trim();
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const token = getToken();
+      if (!token) {
+        throw new Error('Please login to use the chatbot');
+      }
+
+      const response = await fetch('https://polynado-backend.onrender.com/api/chatbot/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          question: questionText
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to get response from chatbot');
+      }
+
+      if (data.success && data.data && data.data.answer) {
+        const botMessage = {
+          id: messages.length + 2,
+          type: 'bot',
+          text: data.data.answer,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, botMessage]);
+      } else {
+        throw new Error('Invalid response format from chatbot');
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to get response. Please try again.';
       const botMessage = {
         id: messages.length + 2,
         type: 'bot',
-        text: "I'm currently in demo mode. Once connected to the backend, I'll be able to query market data, analyze trends, and provide insights based on real-time information.",
+        text: `Sorry, I encountered an error: ${errorMessage}`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, botMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

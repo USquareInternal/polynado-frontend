@@ -175,7 +175,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
           return;
         }
 
-        const response = await fetch('https://polynado-backend.onrender.com/api/referral/referred-users', {
+        const response = await fetch('https://polynado-backend-n2he.onrender.com/api/referral/referred-users', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

@@ -55,7 +55,7 @@ const PolynodoChatbot: React.FC = () => {
         throw new Error('Please login to use the chatbot');
       }
 
-      const response = await fetch('https://polynado-backend.onrender.com/api/chatbot/chat', {
+      const response = await fetch('https://polynado-backend-n2he.onrender.com/api/chatbot/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

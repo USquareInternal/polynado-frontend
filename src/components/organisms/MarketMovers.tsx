@@ -127,7 +127,7 @@ export const MarketMovers: React.FC = () => {
                         <MarketActivityChart />
                     </div>
 
-                    <Heading
+                    {/* <Heading
                         level={2}
                         className="text-white font-medium mb-6 xl:mb-8 fullhd:mb-10 text-xl sm:text-2xl xl:text-3xl fullhd:text-4xl"
                         style={{
@@ -147,7 +147,7 @@ export const MarketMovers: React.FC = () => {
                                 variant="default"
                             />
                         ))}
-                    </div>
+                    </div> */}
                 </aside>
             </div>
         </section>

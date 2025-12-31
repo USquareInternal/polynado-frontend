@@ -151,14 +151,37 @@ const NFTMintDashboard: React.FC = () => {
     }
   }, [standardCollectionError, proCollectionError]);
 
-  // Format price function - Price comes in Ether format (18 decimals), display as USDT
+  // Debug logging for collection data and prices
+  useEffect(() => {
+    console.log('[NFT Mint] Standard Collection:', {
+      collection: standardCollection,
+      mintPrice: standardMintPrice,
+      mintPriceString: standardMintPrice?.toString(),
+      isLoading: isLoadingStandardCollection,
+      error: standardCollectionError,
+    });
+    console.log('[NFT Mint] Pro Collection:', {
+      collection: proCollection,
+      mintPrice: proMintPrice,
+      mintPriceString: proMintPrice?.toString(),
+      isLoading: isLoadingProCollection,
+      error: proCollectionError,
+    });
+    console.log('[NFT Mint] Contract Address:', getNFTContractAddress());
+    console.log('[NFT Mint] USDT Meta:', { usdtAddress, usdtDecimals });
+  }, [standardCollection, proCollection, standardMintPrice, proMintPrice, isLoadingStandardCollection, isLoadingProCollection, standardCollectionError, proCollectionError, usdtAddress, usdtDecimals]);
+
+  // Format price function - Price comes in USDT format
+  // Contract stores mint prices in USDT's smallest unit (6 decimals for USDT standard)
+  // Always use 6 decimals for mint prices, regardless of token decimals
   const formatPrice = (raw?: bigint) => {
     if (raw === undefined || raw === null) {
       return 'N/A';
     }
     
-    // Price comes in Ether format (18 decimals)
-    const decimals = 18;
+    // Mint prices are always stored in USDT units (6 decimals)
+    // This is independent of the actual USDT token decimals
+    const decimals = 6;
     
     // Use bigint division for precision
     const divisor = BigInt(10 ** decimals);

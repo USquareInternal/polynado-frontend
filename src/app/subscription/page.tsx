@@ -22,7 +22,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { CheckOutlined, CrownOutlined, ThunderboltOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { getUserData, getToken } from '@/services/authService';
-import { useSubscriptionInfo, useUserInfo } from '@/utils/nftContract';
+import { useUserInfo } from '@/utils/nftContract';
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
 import { API_BASE_URL } from '@/components/organisms/WithdrawalHistory';
 import Spinner from '@/components/atoms/Spinner';
@@ -46,9 +46,6 @@ const SubscriptionPage: React.FC = () => {
   const standardPrice = 10; // Display: $10/month
   const proPrice = 20; // Display: $20/month
   
-  // Get subscription info for logged-in user
-  const { subscriptionInfo, isLoading: isLoadingSubscriptionInfo, refetch: refetchSubscriptionInfo } = useSubscriptionInfo(userId || undefined);
-  
   // Get user info to check which NFTs they've minted
   const { userInfo, isLoading: isLoadingUserInfo, refetch: refetchUserInfo } = useUserInfo(userId || undefined);
   
@@ -70,12 +67,12 @@ const SubscriptionPage: React.FC = () => {
   const hasProNFT = hasProNFTOnChain || authHasProNFT;
   const hasAnyNFT = hasStandardNFT || hasProNFT;
   
-  // Subscription active flags (prefer on-chain, fall back to auth data while loading)
+  // Subscription active flags (rely on auth data only, since contract functions are removed)
   const authIsSubscribedStandard = authUserData?.isSubscribedStandard === true;
   const authIsSubscribedPro = authUserData?.isSubscribedPro === true;
 
-  const isSubscriptionActive = (subscriptionInfo?.isActive ?? false) || authIsSubscribedStandard || authIsSubscribedPro;
-  const activeSubscriptionType = subscriptionInfo?.subType ?? (authIsSubscribedPro ? 2 : authIsSubscribedStandard ? 1 : 0);
+  const isSubscriptionActive = authIsSubscribedStandard || authIsSubscribedPro;
+  const activeSubscriptionType = authIsSubscribedPro ? 2 : authIsSubscribedStandard ? 1 : 0;
 
   // Calculate remaining time from auth user data expiry timestamps (fallback while on-chain loads)
   const calculateRemainingTimeFromAuth = () => {
@@ -154,7 +151,6 @@ const SubscriptionPage: React.FC = () => {
           const sessionStatus = data.session?.status;
 
           if (paymentStatus === 'paid' || sessionStatus === 'complete') {
-            refetchSubscriptionInfo();
             // Redirect back to subscription with a success flag to ensure toast after routing (toast shown there)
             router.replace('/subscription?paid=1');
           } else if (paymentStatus === 'unpaid' || paymentStatus === 'requires_payment_method' || paymentStatus === 'open') {
@@ -178,16 +174,12 @@ const SubscriptionPage: React.FC = () => {
       router.replace('/subscription');
       setIsSessionVerifying(false);
     }
-  }, [searchParams, router, refetchSubscriptionInfo]);
+  }, [searchParams, router]);
 
-  // Update remaining time countdown (prefer on-chain data, fallback to auth data)
+  // Update remaining time countdown (use auth data only)
   useEffect(() => {
-    // Use on-chain data if available, otherwise use auth data
-    const onChainRemainingTime = subscriptionInfo?.isActive && subscriptionInfo.remainingTime 
-      ? Number(subscriptionInfo.remainingTime) 
-      : null;
-    
-    const timeToUse = onChainRemainingTime ?? authRemainingTime;
+    // Use auth data for remaining time
+    const timeToUse = authRemainingTime;
 
     if (timeToUse && timeToUse > 0) {
       setRemainingTime(timeToUse);
@@ -197,7 +189,6 @@ const SubscriptionPage: React.FC = () => {
         setRemainingTime((prev) => {
           if (prev === null || prev <= 0) {
             clearInterval(interval);
-            refetchSubscriptionInfo();
             return 0;
           }
           return prev - 1;
@@ -208,7 +199,7 @@ const SubscriptionPage: React.FC = () => {
     } else {
       setRemainingTime(null);
     }
-  }, [subscriptionInfo, authRemainingTime, refetchSubscriptionInfo]);
+  }, [authRemainingTime]);
 
   // Format remaining time
   const formatRemainingTime = (seconds: number): string => {
@@ -264,9 +255,9 @@ const SubscriptionPage: React.FC = () => {
       const token = getToken();
       if (!token) {
         showErrorToast('Authentication required. Please login again.');
-        router.push('/login');
-        return;
-      }
+      router.push('/login');
+      return;
+    }
 
       
 
@@ -330,20 +321,20 @@ const SubscriptionPage: React.FC = () => {
   const isStandardDisabled = Boolean(
     isProcessing || 
     !userId || 
-    // Only disable if we've confirmed subscription is active (after loading completes)
-    (isLoadingSubscriptionInfo ? false : isSubscriptionActive) ||
+    // Only disable if we've confirmed subscription is active
+    isSubscriptionActive ||
     // Only disable if we've confirmed user has NFT (after loading completes)
     (isLoadingUserInfo ? false : hasAnyNFT)
   );
   const isProDisabled = Boolean(
     isProcessing || 
     !userId || 
-    // Only disable if we've confirmed subscription is active (after loading completes)
-    (isLoadingSubscriptionInfo ? false : isSubscriptionActive) ||
+    // Only disable if we've confirmed subscription is active
+    isSubscriptionActive ||
     // Only disable if we've confirmed user has NFT (after loading completes)
     (isLoadingUserInfo ? false : hasAnyNFT)
   );
-  const showLoader = isLoadingSubscriptionInfo || isLoadingUserInfo || isProcessing || isSessionVerifying;
+  const showLoader = isLoadingUserInfo || isProcessing || isSessionVerifying;
   return (
     <MainLayout>
       <style dangerouslySetInnerHTML={{__html: `

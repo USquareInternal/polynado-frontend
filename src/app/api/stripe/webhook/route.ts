@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       // NOTE: Backend team should provide the endpoint URL and update BACKEND_API_URL env variable if needed
       if (session.metadata?.userId && session.metadata?.subscriptionType) {
         try {
-          const backendUrl = process.env.BACKEND_API_URL || 'https://polynado-backend.onrender.com';
+          const backendUrl = process.env.BACKEND_API_URL || 'https://polynado-backend-n2he.onrender.com';
           const backendEndpoint = `${backendUrl}/api/subscriptions/activate`; // Backend team: update this endpoint if different
           
           const response = await fetch(backendEndpoint, {

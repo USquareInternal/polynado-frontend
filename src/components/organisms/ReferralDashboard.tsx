@@ -9,6 +9,9 @@ import { RewardCard } from '@/components/molecules/RewardCard';
 import { Heading } from '@/components/atoms/Heading';
 import { getToken, getUserData } from '@/services/authService';
 import Spinner from '@/components/atoms/Spinner';
+import { useClaimReferralRewards } from '@/utils/nftContract';
+import { showSuccessToast, showErrorToast, showWarningToast, showRejectionToast, isUserRejection } from '@/utils/toast';
+import { API_BASE_URL } from '@/components/organisms/WithdrawalHistory';
 
 // Define the props for the component
 interface ReferralDashboardProps {
@@ -79,13 +82,24 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
     { value: '0 USDT', label: 'Total Rewards Earned', iconType: 'rewards' as const },
   ]);
   
-  // Get userId from userData for referral link
+  // Get userId for contract calls
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Referral rewards from API
+  const [referralRewards, setReferralRewards] = useState<number>(0);
+  const [isLoadingRewards, setIsLoadingRewards] = useState(false);
+  
+  // Claim referral rewards hook
+  const { claimReferralRewards, hash, isPending, isConfirming, isSuccess, error, reset } = useClaimReferralRewards();
+  
+  // Get userId from userData for referral link and contract calls
   useEffect(() => {
     const userData = getUserData() as any;
-    const userId = userData?.userId || '';
-    if (userId) {
+    const userIdValue = userData?.userId || '';
+    setUserId(userIdValue || null);
+    if (userIdValue) {
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://polynado.xyz';
-      setReferralLink(`${baseUrl}/signup?ref=${userId}`);
+      setReferralLink(`${baseUrl}/signup?ref=${userIdValue}`);
     } else {
       setReferralLink('');
     }
@@ -305,6 +319,215 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
     fetchReferredUsers();
   }, []);
 
+  // Fetch referral rewards from API
+  const fetchReferralRewards = async () => {
+    try {
+      setIsLoadingRewards(true);
+      const token = getToken();
+      
+      if (!token) {
+        console.error('No authentication token found');
+        setReferralRewards(0);
+        setIsLoadingRewards(false);
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/myDetails`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user details: ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      console.log('[ReferralDashboard] Full API Response:', JSON.stringify(responseData, null, 2));
+      
+      // Handle different response structures - check for user, data, or direct response
+      const userData = responseData?.user || responseData?.data || responseData;
+      console.log('[ReferralDashboard] Extracted user/data object:', JSON.stringify(userData, null, 2));
+      
+      // Extract referralRewards field from the response
+      // The API returns it as a number (e.g., 0.01) in the user object
+      const rewards = userData?.referralRewards;
+      console.log('[ReferralDashboard] referralRewards value:', rewards, 'Type:', typeof rewards);
+      
+      if (rewards !== undefined && rewards !== null) {
+        
+        // Handle different formats: string (wei/USDT smallest unit), bigint, or number
+        // The API returns it as a number (e.g., 0.01) in USDT format
+        let rewardsNumber = 0;
+        if (typeof rewards === 'number') {
+          // Already in USDT format as a number
+          rewardsNumber = rewards;
+        } else if (typeof rewards === 'string') {
+          // If it's a string, check if it's in smallest unit format or already in USDT
+          const numValue = parseFloat(rewards);
+          
+          // Check if it's a large number (likely in smallest unit format)
+          // USDT uses 6 decimals, so 0.01 USDT = 10000 in smallest unit
+          // Wei uses 18 decimals, so 0.01 USDT = 10000000000000000 in wei
+          if (numValue >= 1e12) {
+            // Likely in wei format (18 decimals), convert to USDT
+            try {
+              const weiAmount = BigInt(rewards);
+              const divisor = BigInt(10 ** 18);
+              const whole = weiAmount / divisor;
+              const remainder = weiAmount % divisor;
+              if (remainder === BigInt(0)) {
+                rewardsNumber = Number(whole);
+              } else {
+                const remainderStr = remainder.toString().padStart(18, '0');
+                const trimmedRemainder = remainderStr.replace(/0+$/, '');
+                const decimalValue = parseFloat(`0.${trimmedRemainder}`);
+                rewardsNumber = Number(whole) + decimalValue;
+              }
+            } catch (e) {
+              // If BigInt conversion fails, treat as USDT format
+              rewardsNumber = numValue;
+            }
+          } else if (numValue >= 1000 && numValue < 1e12 && !rewards.includes('.')) {
+            // Likely in USDT smallest unit (6 decimals), e.g., 10000 = 0.01 USDT
+            try {
+              const usdtAmount = BigInt(rewards);
+              const divisor = BigInt(10 ** 6); // USDT uses 6 decimals
+              const whole = usdtAmount / divisor;
+              const remainder = usdtAmount % divisor;
+              if (remainder === BigInt(0)) {
+                rewardsNumber = Number(whole);
+              } else {
+                const remainderStr = remainder.toString().padStart(6, '0');
+                const trimmedRemainder = remainderStr.replace(/0+$/, '');
+                const decimalValue = parseFloat(`0.${trimmedRemainder}`);
+                rewardsNumber = Number(whole) + decimalValue;
+              }
+            } catch (e) {
+              // If BigInt conversion fails, treat as USDT format
+              rewardsNumber = numValue;
+            }
+          } else {
+            // Already in USDT format (decimal number like "0.01" or "0.01")
+            rewardsNumber = numValue;
+          }
+        } else if (typeof rewards === 'bigint') {
+          // Check if it's in wei (18 decimals) or USDT smallest unit (6 decimals)
+          // If value is very large (> 1e12), assume wei format, otherwise assume USDT smallest unit
+          if (rewards >= BigInt(1e12)) {
+            // Convert from wei (18 decimals) to USDT
+            const divisor = BigInt(10 ** 18);
+            const whole = rewards / divisor;
+            const remainder = rewards % divisor;
+            if (remainder === BigInt(0)) {
+              rewardsNumber = Number(whole);
+            } else {
+              const remainderStr = remainder.toString().padStart(18, '0');
+              const trimmedRemainder = remainderStr.replace(/0+$/, '');
+              const decimalValue = parseFloat(`0.${trimmedRemainder}`);
+              rewardsNumber = Number(whole) + decimalValue;
+            }
+          } else {
+            // Convert from USDT smallest unit (6 decimals) to USDT
+            const divisor = BigInt(10 ** 6);
+            const whole = rewards / divisor;
+            const remainder = rewards % divisor;
+            if (remainder === BigInt(0)) {
+              rewardsNumber = Number(whole);
+            } else {
+              const remainderStr = remainder.toString().padStart(6, '0');
+              const trimmedRemainder = remainderStr.replace(/0+$/, '');
+              const decimalValue = parseFloat(`0.${trimmedRemainder}`);
+              rewardsNumber = Number(whole) + decimalValue;
+            }
+          }
+        } else {
+          // Number type - assume it's already in USDT format
+          rewardsNumber = Number(rewards) || 0;
+        }
+        
+        console.log('[ReferralDashboard] Parsed rewardsNumber:', rewardsNumber);
+        setReferralRewards(rewardsNumber);
+      } else {
+        console.log('[ReferralDashboard] referralRewards is undefined or null');
+        setReferralRewards(0);
+      }
+    } catch (error) {
+      console.error('Error fetching referral rewards:', error);
+      setReferralRewards(0);
+    } finally {
+      setIsLoadingRewards(false);
+    }
+  };
+
+  // Fetch referral rewards on mount and after successful transaction
+  useEffect(() => {
+    fetchReferralRewards();
+  }, []);
+
+
+  // Handle transaction success/error
+  useEffect(() => {
+    if (isSuccess) {
+      showSuccessToast('Rewards claimed successfully!');
+      reset();
+      // Refetch referral rewards to update the displayed amount
+      // Wait a bit for the backend to update
+      setTimeout(() => {
+        fetchReferralRewards();
+      }, 2000);
+    } else if (error) {
+      if (isUserRejection(error)) {
+        showRejectionToast();
+      } else {
+        const errorMessage = (error as any)?.message || (error as any)?.shortMessage || 'Failed to claim rewards';
+        showErrorToast(errorMessage);
+      }
+      reset();
+    }
+  }, [isSuccess, error, reset]);
+
+  // Handle payout button click
+  const handlePayoutClick = async () => {
+    try {
+      if (!userId) {
+        showErrorToast('User ID not found. Please log in again.');
+        return;
+      }
+
+      // Use referral rewards from API
+      const rewardAmount = referralRewards;
+      
+      // Check if reward amount is valid
+      if (isNaN(rewardAmount) || rewardAmount < 0) {
+        showErrorToast('Invalid reward amount');
+        return;
+      }
+
+      // Check minimum threshold (0.001 USDT)
+      const MINIMUM_REWARD = 0.001;
+      if (rewardAmount < MINIMUM_REWARD) {
+        showWarningToast('Needed Minimum of 0.0001 USDT to proceed with payout');
+        return;
+      }
+
+      // Convert to USDT smallest unit (6 decimals) and multiply by 1000000
+      const amountToClaim = BigInt(Math.floor(rewardAmount * 1000000));
+
+      // Call contract function
+      await claimReferralRewards(userId, amountToClaim);
+    } catch (error: any) {
+      console.error('Error claiming rewards:', error);
+      if (isUserRejection(error)) {
+        showRejectionToast();
+      } else {
+        showErrorToast(error?.message || 'Failed to claim rewards');
+      }
+    }
+  };
+
   return (
     <section className="mt-12 relative">
       {/* Loader overlay - only show on referral page (not home page) */}
@@ -465,8 +688,13 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
             </p>
             <div className="flex justify-center mt-10 mb-5">
               <button
-                disabled
-                className="px-6 py-2 rounded-full text-sm font-semibold text-white cursor-not-allowed relative overflow-hidden opacity-75"
+                onClick={handlePayoutClick}
+                disabled={isPending || isConfirming || !userId}
+                className={`px-6 py-2 rounded-full text-sm font-semibold text-white relative overflow-hidden ${
+                  isPending || isConfirming || !userId
+                    ? 'cursor-not-allowed opacity-75'
+                    : 'cursor-pointer hover:opacity-90 transition-opacity'
+                }`}
                 style={{
                   backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
                   color: "white",
@@ -474,14 +702,29 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
                   boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
                   position: 'relative',
                 }}
-                title="Withdrawal coming soon! You need a cumulative reward of 100 USDT to withdraw."
               >
-                {(() => {
-                  const totalRewardsStat = stats.find(stat => stat.label === 'Total Rewards Earned');
-                  const rewardValue = totalRewardsStat?.value || '0 USDT';
-                  const displayValue = typeof rewardValue === 'string' ? rewardValue : `${rewardValue} USDT`;
-                  return `${displayValue} Request Payout`;
-                })()}
+                {isPending || isConfirming ? (
+                  'Processing...'
+                ) : (
+                  (() => {
+                    // Format referral rewards from API
+                    // Preserve decimal precision up to 6 digits
+                    let formattedRewards: string;
+                    if (referralRewards === 0) {
+                      formattedRewards = '0.00';
+                    } else if (referralRewards < 0.01) {
+                      // For very small values, show up to 6 decimal places
+                      formattedRewards = referralRewards.toFixed(6).replace(/\.?0+$/, '');
+                    } else {
+                      // For larger values, show 2-6 decimal places
+                      formattedRewards = referralRewards.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 6,
+                      });
+                    }
+                    return `${formattedRewards} USDT Request Payout`;
+                  })()
+                )}
               </button>
             </div>
             <p

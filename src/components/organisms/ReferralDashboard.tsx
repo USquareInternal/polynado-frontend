@@ -507,9 +507,9 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
       }
 
       // Check minimum threshold (0.001 USDT)
-      const MINIMUM_REWARD = 0.001;
+      const MINIMUM_REWARD = 100;
       if (rewardAmount < MINIMUM_REWARD) {
-        showWarningToast('Needed Minimum of 0.0001 USDT to proceed with payout');
+        showWarningToast('Needed Minimum of 100 USDT to proceed with payout');
         return;
       }
 

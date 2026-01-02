@@ -425,6 +425,41 @@ export const useJoinPolynado = () => {
 
 
 /**
+ * Hook to claim referral rewards via claimReferralRewards(userId, amountToClaim)
+ */
+export const useClaimReferralRewards = () => {
+  const contractAddress = getContractAddress();
+
+  const { writeContract, data: hash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const claimReferralRewards = async (userId: string, amountToClaim: bigint) => {
+    if (!contractAddress) {
+      throw new Error('NFT contract address not set');
+    }
+
+    writeContract({
+      address: contractAddress,
+      abi: NFTmintABI,
+      functionName: 'claimReferralRewards',
+      args: [userId, amountToClaim],
+    });
+  };
+
+  return {
+    claimReferralRewards,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+    reset,
+  };
+};
+
+/**
  * Hook to get userId by wallet address
  */
 export const useUserIdByWallet = (walletAddress?: `0x${string}`) => {

@@ -1,11 +1,17 @@
 // src/components/molecules/MarketCard.tsx
 import React from 'react';
+import Image from 'next/image';
 import { Heading } from '@/components/atoms/Heading';
-import { CircularProgress } from '../atoms/CircularProgress';
 
 // --- Custom Colors ---
 const GREEN_COLOR = '#4CAF50'; // Vibrant Green
 const Red = '#FF6347'; // Pink/Red
+const WHITE_COLOR = '#FFFFFF';
+
+// Helper function to format number and strip trailing zeros
+const formatNumber = (num: number, decimals: number): string => {
+  return num.toFixed(decimals).replace(/\.?0+$/, '');
+};
 
 export interface MarketCardProps {
   title: string;
@@ -60,30 +66,52 @@ export const MarketCard: React.FC<MarketCardProps> = ({
           {title}
         </Heading>
 
-        {/* Yes/No Pay Structure: fixed height to keep pies aligned across cards */}
-        <div className="flex justify-around items-center my-1 min-h-[150px] flex-1">
-
-          {/* Yes Side (Green/Trump) */}
-          <div className="flex flex-col items-center">
-            <CircularProgress
-              percentage={yesPercentage}
-              color={GREEN_COLOR}
-              label={yesLabel}
-              payText={yesPay}
-              // payoutText={yesPayout}
-              isYesSide={true}
-            />
+        {/* Yes/No Pay Structure */}
+        <div className="flex justify-between items-center my-1 min-h-[150px] flex-1 gap-4">
+          {/* Yes Side */}
+          <div className="relative w-36 h-36 flex flex-col text-white rounded-xl border border-white/10 bg-[#1E2022] overflow-hidden">
+            {/* Background Chart Image */}
+            <div className="absolute inset-0 w-full h-full">
+              <Image
+                src="/Yes.png"
+                alt="Yes trend chart"
+                fill
+                className="object-cover"
+                style={{ opacity: 0.9 }}
+              />
+            </div>
+            {/* Content Overlay - Positioned in lower-left */}
+            <div className="relative z-10 flex flex-col items-start justify-end p-3 h-full gap-1">
+              <div className="text-sm sm:text-base font-bold text-white drop-shadow-lg">{yesLabel}</div>
+              <div className="text-base sm:text-lg font-bold text-white drop-shadow-lg">{typeof yesPercentage === 'number' ? formatNumber(yesPercentage, 4) : yesPercentage}%</div>
+              <div className="text-xs sm:text-sm text-white drop-shadow-lg">
+                <span className="font-normal">pay </span>
+                <span className="font-semibold">{yesPay}</span>
+              </div>
+            </div>
           </div>
 
-          {/* No Side (Pink/Harris) */}
-          <div className="flex flex-col items-center">
-            <CircularProgress
-              percentage={noPercentage}
-              color={Red}
-              label={noLabel}
-              payText={noPay}
-              isYesSide={false}
-            />
+          {/* No Side */}
+          <div className="relative w-36 h-36 flex flex-col text-white rounded-xl border border-white/10 bg-[#1E2022] overflow-hidden">
+            {/* Background Chart Image */}
+            <div className="absolute inset-0 w-full h-full">
+              <Image
+                src="/No.png"
+                alt="No trend chart"
+                fill
+                className="object-cover"
+                style={{ opacity: 0.9 }}
+              />
+            </div>
+            {/* Content Overlay - Positioned in lower-right */}
+            <div className="relative z-10 flex flex-col items-end justify-end p-3 h-full gap-1">
+              <div className="text-sm sm:text-base font-bold text-white drop-shadow-lg" style={{ color: WHITE_COLOR }}>{noLabel}</div>
+              <div className="text-base sm:text-lg font-bold text-white drop-shadow-lg">{typeof noPercentage === 'number' ? formatNumber(noPercentage, 4) : noPercentage}%</div>
+              <div className="text-xs sm:text-sm text-white drop-shadow-lg">
+                <span className="font-normal">pay </span>
+                <span className="font-semibold">{noPay}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -93,12 +121,12 @@ export const MarketCard: React.FC<MarketCardProps> = ({
 
         {/* Volume */}
         <div className="flex flex-col items-start">
-          <span className="font-medium text-gray-400">Volume: <span className="text-white font-bold">${volume}</span></span>
+          <span className="font-medium text-gray-400">Volume: <span className="text-white font-bold">{volume}</span></span>
         </div>
 
         {/* Liquidity */}
         <div className="flex flex-col items-center">
-          <span className="font-medium text-gray-400">Liquidity: <span className="text-white font-bold">${liquidity}</span></span>
+          <span className="font-medium text-gray-400">Liquidity: <span className="text-white font-bold">{liquidity}</span></span>
         </div>
 
         {/* Change */}

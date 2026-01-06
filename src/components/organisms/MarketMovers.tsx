@@ -5,6 +5,8 @@ import { MarketCard } from '@/components/molecules/MarketCard';
 import { MarketActivityChart } from '@/components/atoms/MarketActivityChart';
 import { TrendBadge } from '@/components/molecules/TrendBadge';
 import { Button } from '@/components/atoms/Button';
+import { ZelenskyTrumpCard } from '@/components/molecules/ZelenskyTrumpCard';
+import { useMarkets } from '@/hooks/useMarkets';
 
 // Mock data for demonstration - Limited to 5-6 trending topics
 const mockTrends = [
@@ -76,30 +78,12 @@ const mockMarkets = [
 ];
 
 export const MarketMovers: React.FC = () => {
-
-    const renderMarketCards = () => (
-        <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-2 fullhd:grid-cols-2 gap-6 xl:gap-8 fullhd:gap-10">
-            {mockMarkets.map((market, index) => (
-                <MarketCard key={index} {...market} />
-            ))}
-
-            <div className="col-span-full text-center pt-2">
-                <Button 
-                  variant="secondary" 
-                  className='w-auto px-10 relative overflow-hidden cursor-pointer' 
-                  style={{
-                    backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
-                    color: "white",
-                    border: "none",
-                    boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
-                    position: 'relative',
-                  }}
-                >
-                  Explore Market
-                </Button>
-            </div>
-        </div>
-    );
+    // Fetch real market data from API
+    const { markets, isLoading, error } = useMarkets(4);
+    
+    // Split markets into first row (2 cards) and second row (2 cards)
+    const firstRowMarkets = markets.slice(0, 2);
+    const secondRowMarkets = markets.slice(2, 4);
 
     return (
         <section className="mt-8 xl:mt-12 fullhd:mt-16">
@@ -114,42 +98,72 @@ export const MarketMovers: React.FC = () => {
                 Top Market Movers
             </Heading>
 
-            {/* Main Content Grid: 12-column grid for 67/33 (8/4) split */}
-            <div className="grid grid-cols-12 gap-6 xl:gap-8 fullhd:gap-10">
+            {isLoading ? (
+                <div className="text-center text-gray-400 py-8">Loading markets...</div>
+            ) : error ? (
+                <div className="text-center text-red-400 py-8">{error}</div>
+            ) : markets.length === 0 ? (
+                <div className="text-center text-gray-400 py-8">No markets available</div>
+            ) : (
+            <div className="grid grid-cols-12 gap-6 xl:gap-8 fullhd:gap-10 items-start">
+                
+                {/* First Row: CRYPTO and MACRO Cards on Left, Zelensky/Trump Cards on Right */}
+                <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-2 fullhd:grid-cols-2 gap-6 xl:gap-8 fullhd:gap-10">
+                    {firstRowMarkets.map((market, index) => (
+                <MarketCard key={market.title || index} {...market} />
+            ))}
+                </div>
+                
+                {/* Zelensky/Trump Cards next to MACRO card - Side by side at same level */}
+                <div className="col-span-12 md:col-span-4 grid grid-cols-2 gap-4 xl:gap-6 fullhd:gap-8">
+                    <ZelenskyTrumpCard
+                        title="$ZELENSKY"
+                        letter="Z"
+                        marketCap="$69,654,896 MC"
+                        yesPrice="40.69¢"
+                        noPrice="59.31¢"
+                    />
+                    <ZelenskyTrumpCard
+                        title="$TRUMP"
+                        letter="T"
+                        marketCap="$76,241,845 MC"
+                        yesPrice="59.31¢"
+                        noPrice="40.69¢"
+                    />
+                </div>
 
-                {/* 1. Market Cards (Left Side) */}
-                {renderMarketCards()}
+                {/* Second Row: Two Market Cards on Left, Chart on Right */}
+                <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-2 fullhd:grid-cols-2 gap-6 xl:gap-8 fullhd:gap-10">
+                    {secondRowMarkets.map((market, index) => (
+                        <MarketCard key={market.title || index + 2} {...market} />
+                    ))}
+                </div>
 
-                {/* 2. Market Chart & Trending Sidebar (Right Side) */}
-                <aside className="col-span-12 md:col-span-4 pt-0 flex flex-col">
-
-                    <div className="mb-6 xl:mb-8 fullhd:mb-10 h-48 md:h-52 xl:h-64 fullhd:h-72">
+                {/* Market Chart aligned with second row */}
+                <aside className="col-span-12 md:col-span-4 flex flex-col items-start">
+                    <div className="w-full h-full">
                         <MarketActivityChart />
                     </div>
-
-                    {/* <Heading
-                        level={2}
-                        className="text-white font-medium mb-6 xl:mb-8 fullhd:mb-10 text-xl sm:text-2xl xl:text-3xl fullhd:text-4xl"
-                        style={{
-                            fontSize: '29.674px',
-                            fontFamily: 'Inter',
-                        }}
-                    >
-                        What's Trending ?
-                    </Heading>
-
-                    <div className="grid grid-cols-3 gap-2 xl:gap-3 fullhd:gap-4">
-                        {mockTrends.map((trend, index) => (
-                            <TrendBadge
-                                key={index}
-                                label={trend}
-                                className={`${trendBadgeCustomClasses} w-full flex items-center justify-center text-center`}
-                                variant="default"
-                            />
-                        ))}
-                    </div> */}
                 </aside>
+
+                {/* Explore Market Button */}
+                <div className="col-span-12 text-center pt-2">
+                <Button 
+                  variant="secondary" 
+                  className='w-auto px-10 relative overflow-hidden cursor-pointer' 
+                  style={{
+                    backgroundImage: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                    color: "white",
+                    border: "none",
+                    boxShadow: '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+                    position: 'relative',
+                  }}
+                >
+                  Explore Markets
+                </Button>
             </div>
+            </div>
+            )}
         </section>
     );
 };

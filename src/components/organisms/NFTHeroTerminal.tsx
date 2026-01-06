@@ -72,14 +72,14 @@ export const HeroTerminal: React.FC = () => {
               position: 'relative',
             }}
           >
-            Get life time access
+            Get Lifetime Access
           </Button>
           <Button
             variant="secondary"
             className="px-5 py-2 text-sm font-semibold border border-white/40 bg-white/10 text-white"
             style={{ backgroundColor: "rgba(255,255,255,0.08)", color: "white" }}
           >
-            Explore Market
+            Explore Markets
           </Button>
         </div>
       </div>

@@ -1,18 +1,12 @@
 // src/components/organisms/MispricingTable.tsx
+'use client';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Heading } from '@/components/atoms/Heading';
-
-interface MispricingRow {
-  id: string | number;
-  marketQuestion: string;
-  marketOdds: number; // percentage (0-100)
-  polynadoFairOdds: number; // percentage (0-100)
-  edgeTrend24h: number; // percentage change with sign (+/-)
-  edgeData: number[]; // array of data points for the graph
-}
+import { useMarketScreener } from '@/hooks/useMarketScreener';
 
 interface MispricingTableProps {
-  data?: MispricingRow[];
+  data?: never; // Remove data prop, we'll use hook instead
 }
 
 // Small Line Graph Component
@@ -23,24 +17,27 @@ const MiniLineGraph: React.FC<{ data: number[]; isPositive: boolean }> = ({ data
   const graphWidth = width - padding * 2;
   const graphHeight = height - padding * 2;
 
-  // Safety check: ensure data is an array with at least one element
-  if (!data || !Array.isArray(data) || data.length === 0) {
-    return (
-      <svg width={width} height={height} className="inline-block">
-        <text x={width / 2} y={height / 2} textAnchor="middle" fontSize="8" fill="#666">
-          No data
-        </text>
-      </svg>
-    );
-  }
+  // Generate dummy data if no data is available
+  const getDummyData = (): number[] => {
+    // Create a simple trend based on isPositive
+    // For positive: slight upward trend, for negative: slight downward trend
+    const baseValue = 50;
+    const trend = isPositive ? 1 : -1;
+    return Array.from({ length: 7 }, (_, i) => baseValue + (i * trend * 2));
+  };
+
+  // Use dummy data if no data is available
+  const graphData = (!data || !Array.isArray(data) || data.length === 0) 
+    ? getDummyData() 
+    : data;
 
   // Normalize data to fit within graph bounds
-  const min = Math.min(...data);
-  const max = Math.max(...data);
+  const min = Math.min(...graphData);
+  const max = Math.max(...graphData);
   const range = max - min || 1; // Avoid division by zero
 
-  const points = data.map((value, index) => {
-    const x = padding + (index / (data.length - 1 || 1)) * graphWidth;
+  const points = graphData.map((value, index) => {
+    const x = padding + (index / (graphData.length - 1 || 1)) * graphWidth;
     const y = padding + graphHeight - ((value - min) / range) * graphHeight;
     return `${x},${y}`;
   }).join(' ');
@@ -61,53 +58,17 @@ const MiniLineGraph: React.FC<{ data: number[]; isPositive: boolean }> = ({ data
   );
 };
 
-// Mock Data for demonstration
-const mockMispricingData: MispricingRow[] = [
-  { 
-    id: 1, 
-    marketQuestion: 'AI Regulation Bill to Pass in 2025?', 
-    marketOdds: 75, 
-    polynadoFairOdds: 60, 
-    edgeTrend24h: -10,
-    edgeData: [65, 62, 60, 58, 55, 52, 50] // downward trend
-  },
-  { 
-    id: 2, 
-    marketQuestion: 'Messi to Return to Barcelona?', 
-    marketOdds: 60, 
-    polynadoFairOdds: 64, 
-    edgeTrend24h: 20,
-    edgeData: [44, 48, 52, 56, 60, 62, 64] // upward trend
-  },
-  { 
-    id: 3, 
-    marketQuestion: 'Bitcoin to reach $100K by EOY 2025?', 
-    marketOdds: 66, 
-    polynadoFairOdds: 74, 
-    edgeTrend24h: -20,
-    edgeData: [94, 90, 86, 82, 78, 76, 74] // downward trend
-  },
-  { 
-    id: 4, 
-    marketQuestion: 'AI Regulation Bill to Pass in 2025?', 
-    marketOdds: 40, 
-    polynadoFairOdds: 74, 
-    edgeTrend24h: 2,
-    edgeData: [72, 72.5, 73, 73.5, 74, 74, 74] // slight upward trend
-  },
-  { 
-    id: 5, 
-    marketQuestion: 'Bitcoin to reach $100K by EOY 2025?', 
-    marketOdds: 30, 
-    polynadoFairOdds: 74, 
-    edgeTrend24h: -5,
-    edgeData: [79, 78, 77, 76, 75, 74.5, 74] // slight downward trend
-  },
-];
+// Helper function to format number and strip trailing zeros
+const formatNumber = (num: number, decimals: number): string => {
+  return num.toFixed(decimals).replace(/\.?0+$/, '');
+};
 
-
-
-export const MispricingTable: React.FC<MispricingTableProps> = ({ data = mockMispricingData }) => {
+export const MispricingTable: React.FC<MispricingTableProps> = () => {
+  const router = useRouter();
+  const { markets, isLoading, error } = useMarketScreener();
+  
+  // Show only first 3-4 rows
+  const displayData = markets.slice(0, 4);
   const headers = [
     'Market Questions',
     'Market Odds',
@@ -116,12 +77,17 @@ export const MispricingTable: React.FC<MispricingTableProps> = ({ data = mockMis
     'Edge'
   ];
 
-  const formatPercent = (value: number) => `${value}%`;
+  const formatPercent = (value: number) => `${formatNumber(value, 4)}%`;
   const formatEdgeTrend = (value: number) => {
     const sign = value >= 0 ? '+' : '';
-    return `${sign}${value}%`;
+    return `${sign}${formatNumber(value, 4)}`;
   };
   const edgeTrendColor = (value: number) => value >= 0 ? 'text-[#6edb8b]' : 'text-[#ef4444]';
+
+  // Convert polynadoFair to percentage if needed
+  const getPolynadoFairPercent = (polynadoFair: number): number => {
+    return polynadoFair < 1 ? polynadoFair * 100 : polynadoFair;
+  };
 
   return (
     <section className="mt-12 xl:mt-16 fullhd:mt-20">
@@ -129,49 +95,82 @@ export const MispricingTable: React.FC<MispricingTableProps> = ({ data = mockMis
         Top Mispricings
       </Heading>
 
-      <div className="overflow-x-auto rounded-2xl border border-orange-500/40 bg-[#1f1f1f] shadow-[0_0_12px_rgba(0,0,0,0.25)]">
-        <table className="min-w-full">
-          <thead>
-            <tr className="bg-gradient-to-r from-orange-700 via-amber-600 to-orange-500 text-white">
-              {headers.map((header, index) => (
-                <th
-                  key={header}
-                  scope="col"
-                  className={`px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 text-left text-xs xl:text-sm fullhd:text-base font-semibold tracking-wide uppercase ${
-                    index === 0 ? 'bg-orange-600' : ''
-                  }`}
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
+      {isLoading ? (
+        <div className="text-center text-gray-400 py-8">Loading mispricings...</div>
+      ) : error ? (
+        <div className="text-center text-red-400 py-8">{error}</div>
+      ) : displayData.length === 0 ? (
+        <div className="text-center text-gray-400 py-8">No mispricings available</div>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-2xl border border-orange-500/40 bg-[#1f1f1f] shadow-[0_0_12px_rgba(0,0,0,0.25)]">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-gradient-to-r from-orange-700 via-amber-600 to-orange-500 text-white">
+                  {headers.map((header, index) => (
+                    <th
+                      key={header}
+                      scope="col"
+                      className={`px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 text-left text-xs xl:text-sm fullhd:text-base font-semibold tracking-wide uppercase ${
+                        index === 0 ? 'bg-orange-600' : ''
+                      }`}
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-          <tbody className="divide-y divide-gray-700 text-sm xl:text-base fullhd:text-lg text-gray-200">
-            {data.map((row, idx) => (
-              <tr
-                key={row.id}
-                className="hover:bg-white/5 transition-colors"
-                style={{ backgroundColor: idx % 2 === 0 ? '#000000' : '#1E2022' }}
-              >
-                <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-medium text-white">{row.marketQuestion}</td>
-                <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold text-gray-100">{formatPercent(row.marketOdds)}</td>
-                <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold text-gray-100">{formatPercent(row.polynadoFairOdds)}</td>
-                <td className={`px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold ${edgeTrendColor(row.edgeTrend24h)}`}>
-                  {formatEdgeTrend(row.edgeTrend24h)}
-                </td>
-                <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
-                  <MiniLineGraph 
-                    data={row.edgeData} 
-                    isPositive={row.edgeTrend24h >= 0} 
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              <tbody className="divide-y divide-gray-700 text-sm xl:text-base fullhd:text-lg text-gray-200">
+                {displayData.map((row, idx) => {
+                  const polynadoFairPercent = getPolynadoFairPercent(row.polynadoFair);
+                  const isEdgePositive = row.edge >= 0;
+                  
+                  return (
+                    <tr
+                      key={row.id}
+                      className="hover:bg-white/5 transition-colors"
+                      style={{ backgroundColor: idx % 2 === 0 ? '#000000' : '#1E2022' }}
+                    >
+                      {/* Market Questions - from marketQuestion */}
+                      <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-medium text-white">{row.marketQuestion}</td>
+                      
+                      {/* Market Odds - from yesPercentage */}
+                      <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold text-gray-100">{formatPercent(row.yesPercentage)}</td>
+                      
+                      {/* Polynado Fair Odds - from polynadoFair */}
+                      <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold text-gray-100">{formatPercent(polynadoFairPercent)}</td>
+                      
+                      {/* 24 Edge Trends - from edge */}
+                      <td className={`px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap font-semibold ${edgeTrendColor(row.edge)}`}>
+                        {formatEdgeTrend(row.edge)}
+                      </td>
+                      
+                      {/* Edge - from momentum, show graph (green if edge >= 0, red if edge < 0) */}
+                      <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
+                        <MiniLineGraph 
+                          data={row.momentum} 
+                          isPositive={isEdgePositive} 
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
+          {/* View More Button */}
+          <div className="mt-6 xl:mt-8 fullhd:mt-10 text-center">
+            <button
+              onClick={() => router.push('/market-screener')}
+              className="px-6 xl:px-8 fullhd:px-10 py-2 xl:py-3 fullhd:py-4 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              View More
+            </button>
+          </div>
+        </>
+      )}
     </section>
   );
 };

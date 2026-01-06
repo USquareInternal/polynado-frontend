@@ -19,7 +19,7 @@ export const SearchAndFilters: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <section className="mb-6 xl:mb-8 fullhd:mb-10">
+    <section className="mt-8 xl:mt-12 fullhd:mt-16 mb-6 xl:mb-8 fullhd:mb-10">
       {/* Search Bar */}
       <div className="flex items-center gap-3 mb-4 xl:mb-6 fullhd:mb-8">
         <div className="flex-1 relative">

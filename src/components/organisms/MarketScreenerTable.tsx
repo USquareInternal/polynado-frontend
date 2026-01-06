@@ -1,20 +1,12 @@
 'use client';
 import React from 'react';
 import { StarOutlined, StarFilled, RightOutlined } from '@ant-design/icons';
+import { useMarketScreener } from '@/hooks/useMarketScreener';
 
-interface MarketRow {
-  id: string;
-  marketQuestion: string;
-  category: string;
-  price: number;
-  priceChange: number;
-  polynadoFair: number;
-  edge: number;
-  momentum: number[];
-  volume24h: string;
-  openInterest: string;
-  isFavorited?: boolean;
-}
+// Helper function to format number and strip trailing zeros
+const formatNumber = (num: number, decimals: number): string => {
+  return num.toFixed(decimals).replace(/\.?0+$/, '');
+};
 
 // Mini Line Graph Component for Momentum
 const MiniLineGraph: React.FC<{ data: number[]; isPositive: boolean }> = ({ data, isPositive }) => {
@@ -60,156 +52,9 @@ const MiniLineGraph: React.FC<{ data: number[]; isPositive: boolean }> = ({ data
   );
 };
 
-const mockMarketData: MarketRow[] = [
-  {
-    id: '1',
-    marketQuestion: 'Bitcoin To Reach $100K By EOY 2025?',
-    category: 'Crypto',
-    price: 67,
-    priceChange: 12.5,
-    polynadoFair: 75,
-    edge: 8.3,
-    momentum: [60, 62, 64, 65, 66, 67, 67],
-    volume24h: '$2.4M',
-    openInterest: '$850K',
-    isFavorited: false,
-  },
-  {
-    id: '2',
-    marketQuestion: 'Trump To Win 2024 Presidential Election?',
-    category: 'Politics',
-    price: 54,
-    priceChange: 8.7,
-    polynadoFair: 61,
-    edge: 7.1,
-    momentum: [50, 51, 52, 53, 54, 54, 54],
-    volume24h: '$3.8M',
-    openInterest: '$1.2M',
-    isFavorited: true,
-  },
-  {
-    id: '3',
-    marketQuestion: 'Ethereum To $5K By March 2025?',
-    category: 'Crypto',
-    price: 42,
-    priceChange: 5.4,
-    polynadoFair: 56,
-    edge: 6.8,
-    momentum: [38, 39, 40, 41, 42, 42, 42],
-    volume24h: '$1.8M',
-    openInterest: '$680K',
-    isFavorited: false,
-  },
-  {
-    id: '4',
-    marketQuestion: 'Lakers To Win NBA Championship 2025?',
-    category: 'Sports',
-    price: 28,
-    priceChange: -6.2,
-    polynadoFair: 34,
-    edge: 5.9,
-    momentum: [34, 32, 30, 29, 28, 28, 28],
-    volume24h: '$980K',
-    openInterest: '$340K',
-    isFavorited: false,
-  },
-  {
-    id: '5',
-    marketQuestion: 'Fed To Cut Interest Rate In March 2025?',
-    category: 'Economics',
-    price: 71,
-    priceChange: 3.8,
-    polynadoFair: 59,
-    edge: 8.9,
-    momentum: [68, 69, 70, 70, 71, 71, 71],
-    volume24h: '$1.5M',
-    openInterest: '$530K',
-    isFavorited: false,
-  },
-  {
-    id: '6',
-    marketQuestion: 'Tesla Stock To Hit $400 By Q2 2025?',
-    category: 'Crypto',
-    price: 48,
-    priceChange: 11.3,
-    polynadoFair: 55,
-    edge: 5.2,
-    momentum: [40, 42, 44, 46, 48, 48, 48],
-    volume24h: '$1.4M',
-    openInterest: '$250K',
-    isFavorited: false,
-  },
-  {
-    id: '7',
-    marketQuestion: 'Bitcoin To Reach $100K By EOY 2025?',
-    category: 'Crypto',
-    price: 67,
-    priceChange: -2.2,
-    polynadoFair: 32,
-    edge: 4.3,
-    momentum: [69, 68, 67, 67, 67, 67, 67],
-    volume24h: '$2.4M',
-    openInterest: '$850K',
-    isFavorited: false,
-  },
-  {
-    id: '8',
-    marketQuestion: '2024 Presidential Election Winner?',
-    category: 'Political',
-    price: 82,
-    priceChange: 10.2,
-    polynadoFair: 43,
-    edge: 9.2,
-    momentum: [75, 77, 79, 80, 81, 82, 82],
-    volume24h: '$1.9M',
-    openInterest: '$650K',
-    isFavorited: false,
-  },
-  {
-    id: '9',
-    marketQuestion: 'Messi To Return To Barcelona?',
-    category: 'Sports',
-    price: 37,
-    priceChange: 12.5,
-    polynadoFair: 75,
-    edge: 8.4,
-    momentum: [30, 32, 34, 35, 36, 37, 37],
-    volume24h: '$1.7M',
-    openInterest: '$340K',
-    isFavorited: false,
-  },
-  {
-    id: '10',
-    marketQuestion: 'AI Regulation Bill To Pass In 2025?',
-    category: 'Political',
-    price: 47,
-    priceChange: 23.5,
-    polynadoFair: 57,
-    edge: 8.3,
-    momentum: [35, 38, 41, 44, 46, 47, 47],
-    volume24h: '$2.4M',
-    openInterest: '$850K',
-    isFavorited: false,
-  },
-  {
-    id: '11',
-    marketQuestion: 'Fed To Cut Interest Rate In March 2025?',
-    category: 'Economics',
-    price: 71,
-    priceChange: 3.8,
-    polynadoFair: 59,
-    edge: 8.9,
-    momentum: [68, 69, 70, 70, 71, 71, 71],
-    volume24h: '$1.5M',
-    openInterest: '$530K',
-    isFavorited: false,
-  },
-];
-
 export const MarketScreenerTable: React.FC = () => {
-  const [favorites, setFavorites] = React.useState<Set<string>>(
-    new Set(mockMarketData.filter(m => m.isFavorited).map(m => m.id))
-  );
+  const { markets: marketData, isLoading, error } = useMarketScreener();
+  const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {
@@ -225,12 +70,13 @@ export const MarketScreenerTable: React.FC = () => {
 
   const headers = [
     'Market',
-    'Price',
-    'Polynado Fair',
+    'Yes percentage',
+    'Yes price',
+    'Polynado fair',
     'Edge',
     'Momentum',
     'Volume',
-    'Actions',
+    'Action',
   ];
 
   return (
@@ -258,9 +104,39 @@ export const MarketScreenerTable: React.FC = () => {
           </thead>
 
           <tbody className="divide-y divide-gray-700 text-sm xl:text-base fullhd:text-lg text-gray-200">
-            {mockMarketData.map((row, idx) => {
-              const isPositive = row.priceChange >= 0;
+            {isLoading ? (
+              <tr>
+                <td colSpan={8} className="px-4 xl:px-6 fullhd:px-8 py-8 text-center text-gray-400">
+                  Loading markets...
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={8} className="px-4 xl:px-6 fullhd:px-8 py-8 text-center text-red-400">
+                  {error}
+                </td>
+              </tr>
+            ) : marketData.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 xl:px-6 fullhd:px-8 py-8 text-center text-gray-400">
+                  No markets available
+                </td>
+              </tr>
+            ) : (
+              marketData.map((row, idx) => {
+              const isPositive = row.yesPercentage >= 50;
               const isFavorited = favorites.has(row.id);
+              
+              // Format volume and openInterest consistently (M for millions, K for thousands) - 2 decimals, strip trailing zeros
+              const formatVolume = (num: number): string => {
+                if (!num || num === 0) return '$0';
+                if (num >= 1000000) return '$' + formatNumber(num / 1000000, 2) + 'M';
+                if (num >= 1000) return '$' + formatNumber(num / 1000, 2) + 'K';
+                return '$' + formatNumber(num, 2);
+              };
+              
+              const formattedVolume = formatVolume(row.volume);
+              const formattedOpenInterest = formatVolume(row.openInterest);
               
               return (
                 <tr
@@ -278,26 +154,28 @@ export const MarketScreenerTable: React.FC = () => {
                     </div>
                   </td>
 
-                  {/* Price */}
+                  {/* Yes percentage */}
                   <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-white">{row.price}c</span>
-                      <span className={`text-xs xl:text-sm ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                        {isPositive ? '↑' : '↓'}{Math.abs(row.priceChange)}%
-                      </span>
-                    </div>
+                    <span className="font-semibold text-white">{formatNumber(row.yesPercentage, 4)}%</span>
                   </td>
 
-                  {/* Polynado Fair */}
+                  {/* Yes price */}
                   <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
-                    <span className="text-xs xl:text-sm text-gray-400">
-                      AI Fair: <span className="text-green-500">{row.polynadoFair}c</span>
+                    <span className="font-semibold text-white">$ {formatNumber(row.yesPrice, 4)}</span>
+                  </td>
+
+                  {/* Polynado fair */}
+                  <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
+                    <span className="text-green-500 font-semibold">
+                      {formatNumber(row.polynadoFair < 1 ? row.polynadoFair * 100 : row.polynadoFair, 4)}%
                     </span>
                   </td>
 
                   {/* Edge */}
                   <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
-                    <span className="text-green-500 font-semibold">+{row.edge}%</span>
+                    <span className={`font-semibold ${row.edge >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {row.edge >= 0 ? '+' : ''}{formatNumber(row.edge, 4)}
+                    </span>
                   </td>
 
                   {/* Momentum */}
@@ -308,12 +186,12 @@ export const MarketScreenerTable: React.FC = () => {
                   {/* Volume */}
                   <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
                     <div className="flex flex-col">
-                      <span className="font-semibold text-white">{row.volume24h}</span>
-                      <span className="text-xs xl:text-sm text-gray-400">OI: {row.openInterest}</span>
+                      <span className="font-semibold text-white">{formattedVolume}</span>
+                      <span className="text-xs xl:text-sm text-gray-400 mt-1">OI: {formattedOpenInterest}</span>
                     </div>
                   </td>
 
-                  {/* Actions */}
+                  {/* Action */}
                   <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <button
@@ -336,7 +214,8 @@ export const MarketScreenerTable: React.FC = () => {
                   </td>
                 </tr>
               );
-            })}
+            })
+            )}
           </tbody>
         </table>
       </div>

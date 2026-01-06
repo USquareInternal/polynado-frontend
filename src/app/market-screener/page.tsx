@@ -43,8 +43,19 @@ const MarketScreenerPage: React.FC = () => {
     <MainLayout>
       <div className="w-full">
         {/* Header Section */}
+      
+
+        {/* Top Market Movers Section */}
+        <TopMarketMoversSection />
+
+        {/* Search and Filters */}
+        <SearchAndFilters />
+
+        {/* Market Table */}
+        <MarketScreenerTable />
+
         <div className="mb-8 xl:mb-10 fullhd:mb-12">
-          <h1 className="text-3xl sm:text-4xl xl:text-5xl fullhd:text-6xl font-bold text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl xl:text-4xl fullhd:text-5xl font-bold text-white mb-2">
             Market Screener
           </h1>
           <p className="text-gray-400 text-sm sm:text-base xl:text-lg fullhd:text-xl">
@@ -54,15 +65,6 @@ const MarketScreenerPage: React.FC = () => {
 
         {/* Featured Market Cards */}
         <FeaturedMarketCards />
-
-        {/* Search and Filters */}
-        <SearchAndFilters />
-
-        {/* Market Table */}
-        <MarketScreenerTable />
-
-        {/* Top Market Movers Section */}
-        <TopMarketMoversSection />
       </div>
     </MainLayout>
   );

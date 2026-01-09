@@ -78,7 +78,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
   const [stats, setStats] = useState([
     { value: 0, label: 'Total Referred Users', iconType: 'users' as const },
     { value: 0, label: 'Total Mints from Referrals', iconType: 'mints' as const },
-    { value: 0, label: 'Total Subscriptions', iconType: 'subscriptions' as const },
+    // { value: 0, label: 'Total Subscriptions', iconType: 'subscriptions' as const },
     { value: '0 USDT', label: 'Total Rewards Earned', iconType: 'rewards' as const },
   ]);
   
@@ -222,7 +222,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
           setStats([
             { value: statsData.totalNumber, label: 'Total Referred Users', iconType: 'users' as const },
             { value: statsData.totalNFTMintUsers, label: 'Total Mints from Referrals', iconType: 'mints' as const },
-            { value: statsData.totalSubscriptionUsers, label: 'Total Subscriptions', iconType: 'subscriptions' as const },
+            // { value: statsData.totalSubscriptionUsers, label: 'Total Subscriptions', iconType: 'subscriptions' as const },
             { value: formattedTotalAmount, label: 'Total Rewards Earned', iconType: 'rewards' as const },
           ]);
         }
@@ -473,6 +473,16 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
     if (isSuccess) {
       showSuccessToast('Rewards claimed successfully!');
       reset();
+      // Update all events to have 0 reward after successful payout
+      setReferralEvents((prevEvents) =>
+        prevEvents.map((event) => ({
+          ...event,
+          reward: '0.00 USDT',
+          status: 'Paid',
+        }))
+      );
+      // Reset referral rewards state
+      setReferralRewards(0);
       // Refetch referral rewards to update the displayed amount
       // Wait a bit for the backend to update
       setTimeout(() => {
@@ -489,6 +499,20 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
     }
   }, [isSuccess, error, reset]);
 
+  // Calculate total reward from events
+  const calculateTotalRewardFromEvents = (): number => {
+    let total = 0;
+    referralEvents.forEach((event) => {
+      // Extract numeric value from event.reward (e.g., "0.01 USDT" -> 0.01)
+      const rewardStr = event.reward.replace(' USDT', '').trim();
+      const rewardValue = parseFloat(rewardStr);
+      if (!isNaN(rewardValue)) {
+        total += rewardValue;
+      }
+    });
+    return total;
+  };
+
   // Handle payout button click
   const handlePayoutClick = async () => {
     try {
@@ -497,8 +521,8 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
         return;
       }
 
-      // Use referral rewards from API
-      const rewardAmount = referralRewards;
+      // Use total reward from events
+      const rewardAmount = calculateTotalRewardFromEvents();
       
       // Check if reward amount is valid
       if (isNaN(rewardAmount) || rewardAmount < 0) {
@@ -707,17 +731,20 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
                   'Processing...'
                 ) : (
                   (() => {
-                    // Format referral rewards from API
+                    // Calculate total reward from events
+                    const totalReward = calculateTotalRewardFromEvents();
+                    
+                    // Format the total reward
                     // Preserve decimal precision up to 6 digits
                     let formattedRewards: string;
-                    if (referralRewards === 0) {
+                    if (totalReward === 0) {
                       formattedRewards = '0.00';
-                    } else if (referralRewards < 0.01) {
+                    } else if (totalReward < 0.01) {
                       // For very small values, show up to 6 decimal places
-                      formattedRewards = referralRewards.toFixed(6).replace(/\.?0+$/, '');
+                      formattedRewards = totalReward.toFixed(6).replace(/\.?0+$/, '');
                     } else {
                       // For larger values, show 2-6 decimal places
-                      formattedRewards = referralRewards.toLocaleString('en-US', {
+                      formattedRewards = totalReward.toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 6,
                       });

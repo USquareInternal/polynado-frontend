@@ -120,7 +120,31 @@ export const useWhitelistMintActive = (collectionId: number | bigint = 1) => {
 };
 
 /**
- * Hook to check if an address is whitelisted
+ * Hook to check if an address is whitelisted (using address, not userId)
+ */
+export const useWhitelistStatusByAddress = (userAddress?: `0x${string}`) => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'isUserWhitelisted',
+    args: userAddress ? [userAddress] : undefined,
+    query: {
+      enabled: !!contractAddress && !!userAddress,
+    },
+  });
+
+  return {
+    isWhitelisted: data as boolean | undefined,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook to check if an address is whitelisted (using userId - kept for backward compatibility)
  */
 export const useWhitelistStatus = (userId?: string) => {
   const contractAddress = getContractAddress();
@@ -137,6 +161,52 @@ export const useWhitelistStatus = (userId?: string) => {
 
   return {
     isWhitelisted: data as boolean | undefined,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook to check if whitelist minting is active globally
+ */
+export const useGlobalWhitelistMintActive = () => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'isWhitelistMintActive',
+    query: {
+      enabled: !!contractAddress,
+    },
+  });
+
+  return {
+    isWhitelistMintActive: data as boolean | undefined,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook to check if public minting is active globally
+ */
+export const useGlobalPublicMintActive = () => {
+  const contractAddress = getContractAddress();
+
+  const { data, isLoading, error, refetch } = useReadContract({
+    address: contractAddress,
+    abi: NFTmintABI,
+    functionName: 'isPublicMintActive',
+    query: {
+      enabled: !!contractAddress,
+    },
+  });
+
+  return {
+    isPublicMintActive: data as boolean | undefined,
     isLoading,
     error,
     refetch,

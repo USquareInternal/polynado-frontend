@@ -133,6 +133,15 @@ button {
 }
 
 /* Custom Connect Wallet Button Styling - Glossy Orange Style */
+/* Ensure wrapper is always visible */
+.custom-connect-button-wrapper {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  min-width: 120px;
+  min-height: 40px;
+}
+
 /* Target all button elements within the wrapper */
 .custom-connect-button-wrapper button,
 .custom-connect-button-wrapper button:hover,

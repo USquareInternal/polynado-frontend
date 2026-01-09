@@ -229,3 +229,154 @@ export const decodeToken = (token: string): { userId?: string; exp?: number } | 
   }
 };
 
+/**
+ * User details response interface
+ */
+export interface UserDetailsResponse {
+  message: string;
+  success: boolean;
+  user: {
+    _id: string;
+    userId: string;
+    referredBy: string | null;
+    rewardByNFTMint: number;
+    rewardBySubscription: number;
+    referralRewards: number;
+    rewardWithdrawn: number;
+    isMintedStandardNFT: boolean;
+    isMintedProNFT: boolean;
+    isSubscribedStandard: boolean;
+    isSubscribedPro: boolean;
+    standardSubscriptionExpiryTimestamp: string | null;
+    proSubscriptionExpiryTimestamp: string | null;
+    isWhitelisted: boolean;
+    email: string;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
+  };
+}
+
+/**
+ * Whitelist request response interface
+ */
+export interface WhitelistRequestResponse {
+  message: string;
+  success: boolean;
+  data: {
+    userId: string;
+    email: string;
+    walletAddress: string;
+    status: string;
+    requestedAt: string;
+    _id: string;
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
+  };
+}
+
+/**
+ * Fetch user details
+ */
+export const fetchUserDetails = async (): Promise<UserDetailsResponse> => {
+  try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/auth/myDetails`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch user details');
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Request whitelist access
+ */
+export const requestWhitelist = async (walletAddress: string): Promise<WhitelistRequestResponse> => {
+  try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/whitelist/request`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        walletAddress,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to request whitelist');
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get whitelist request status
+ */
+export const getWhitelistRequestStatus = async (): Promise<WhitelistRequestResponse | null> => {
+  try {
+    const token = getToken();
+    if (!token) {
+      return null;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/whitelist/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 404) {
+      // No request found, return null
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch whitelist request status');
+    }
+
+    return data;
+  } catch (error) {
+    // If error is 404 or no request exists, return null
+    if (error instanceof Error && error.message.includes('404')) {
+      return null;
+    }
+    // For other errors, log but don't throw (optional - can be handled by caller)
+    console.error('Error fetching whitelist request status:', error);
+    return null;
+  }
+};
+

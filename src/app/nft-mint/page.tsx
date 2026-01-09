@@ -9,6 +9,9 @@ import {
   getNFTContractAddress,
   useWhitelistMintActive,
   useWhitelistStatus,
+  useWhitelistStatusByAddress,
+  useGlobalWhitelistMintActive,
+  useGlobalPublicMintActive,
   useNFTBalance,
   useUSDTMeta,
   usePublicMint,
@@ -20,7 +23,7 @@ import {
 import { showSuccessAlert,showFailedAlert } from "@/utils/SweetAlertUtils";
 import { isUserRejection, showRejectionToast } from '@/utils/toast';
 import { useWalletValidation } from '@/hooks/useWalletValidation';
-import { getUserData } from '@/services/authService';
+import { getUserData, fetchUserDetails, requestWhitelist, getWhitelistRequestStatus, UserDetailsResponse, WhitelistRequestResponse } from '@/services/authService';
 import Spinner from '@/components/atoms/Spinner';
 
 const NFTMintDashboard: React.FC = () => {
@@ -30,6 +33,10 @@ const NFTMintDashboard: React.FC = () => {
   const [proError, setProError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [authUserData, setAuthUserData] = useState<any>(null);
+  const [userDetails, setUserDetails] = useState<UserDetailsResponse['user'] | null>(null);
+  const [whitelistRequestStatus, setWhitelistRequestStatus] = useState<string | null>(null);
+  const [isRequestingWhitelist, setIsRequestingWhitelist] = useState(false);
+  const [isLoadingUserDetails, setIsLoadingUserDetails] = useState(false);
   
   // Validate wallet address mapping
   useWalletValidation();
@@ -39,24 +46,94 @@ const NFTMintDashboard: React.FC = () => {
     const userData = getUserData();
     if (userData) {
       setAuthUserData(userData);
-      // Use userId or reffralId as userId
-      const id = (userData as any).userId || (userData as any).reffralId;
+      // Use userId from login response
+      const id = (userData as any).userId;
       if (id) {
         setUserId(id);
       }
     }
   }, []);
 
+  // Fetch user details to check whitelist status
+  useEffect(() => {
+    const loadUserDetails = async () => {
+      try {
+        setIsLoadingUserDetails(true);
+        const response = await fetchUserDetails();
+        setUserDetails(response.user);
+        
+        // Also fetch whitelist request status if user is not whitelisted
+        if (!response.user.isWhitelisted) {
+          try {
+            const whitelistStatusResponse = await getWhitelistRequestStatus();
+            if (whitelistStatusResponse && whitelistStatusResponse.data) {
+              setWhitelistRequestStatus(whitelistStatusResponse.data.status);
+            }
+          } catch (error) {
+            // If no request exists or error fetching, status remains null
+            console.log('No whitelist request found or error fetching status');
+          }
+        }
+      } catch (error: any) {
+        console.error('Failed to fetch user details:', error);
+        // Don't show error to user, just log it
+      } finally {
+        setIsLoadingUserDetails(false);
+      }
+    };
+
+    // Only fetch if user is logged in (has token)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    if (token) {
+      loadUserDetails();
+    }
+  }, []);
+
+  // Handle whitelist request
+  const handleRequestWhitelist = async () => {
+    if (!address) {
+      showFailedAlert('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      setIsRequestingWhitelist(true);
+      const response = await requestWhitelist(address);
+      setWhitelistRequestStatus(response.data.status);
+      showSuccessAlert('Whitelist request submitted successfully');
+      
+      // Refresh user details to get updated status
+      const userDetailsResponse = await fetchUserDetails();
+      setUserDetails(userDetailsResponse.user);
+    } catch (error: any) {
+      console.error('Failed to request whitelist:', error);
+      showFailedAlert(error.message || 'Failed to request whitelist. Please try again.');
+    } finally {
+      setIsRequestingWhitelist(false);
+    }
+  };
+
   // Read contract data (per collection)
   const { collection: standardCollection, isLoading: isLoadingStandardCollection, error: standardCollectionError } = useCollectionInfo(1);
   const { collection: proCollection, isLoading: isLoadingProCollection, error: proCollectionError } = useCollectionInfo(2);
   const { current: standardCurrent, max: standardMax, isLoading: isLoadingStandardSupply, refetch: refetchStandardSupply } = useCollectionSupply(1);
   const { current: proCurrent, max: proMax, isLoading: isLoadingProSupply, refetch: refetchProSupply } = useCollectionSupply(2);
+  // Global mint status from contract (not per collection)
+  const { isWhitelistMintActive, isLoading: isLoadingGlobalWhitelistMintActive } = useGlobalWhitelistMintActive();
+  const { isPublicMintActive, isLoading: isLoadingGlobalPublicMintActive } = useGlobalPublicMintActive();
+  
+  // Check whitelist status by address (not userId)
+  const { isWhitelisted: isWhitelistedByAddress, isLoading: isLoadingWhitelistStatusByAddress, refetch: refetchWhitelistStatusByAddress } = useWhitelistStatusByAddress(address);
+  
+  // Keep old hooks for backward compatibility (per collection - may not be used)
   const { publicMintActive: publicMintActiveStandard, isLoading: isLoadingMintActiveStandard } = usePublicMintActive(1);
   const { publicMintActive: publicMintActivePro, isLoading: isLoadingMintActivePro } = usePublicMintActive(2);
   const { whitelistMintActive: whitelistMintActiveStandard, isLoading: isLoadingWhitelistActiveStandard } = useWhitelistMintActive(1);
   const { whitelistMintActive: whitelistMintActivePro, isLoading: isLoadingWhitelistActivePro } = useWhitelistMintActive(2);
-  const { isWhitelisted, isLoading: isLoadingWhitelistStatus, refetch: refetchWhitelistStatus } = useWhitelistStatus(userId || undefined);
+  const { isWhitelisted: isWhitelistedByUserId, isLoading: isLoadingWhitelistStatus, refetch: refetchWhitelistStatus } = useWhitelistStatus(userId || undefined);
+  
+  // Use address-based whitelist status (preferred) or fallback to userId-based
+  const isWhitelisted = isWhitelistedByAddress !== undefined ? isWhitelistedByAddress : isWhitelistedByUserId;
   const { balance, isLoading: isLoadingBalance, refetch: refetchBalance } = useNFTBalance(address as `0x${string}` | undefined);
   const { usdtAddress: usdtAddressFromContract, usdtDecimals, isLoading: isLoadingUsdtMeta } = useUSDTMeta();
   
@@ -121,22 +198,27 @@ const NFTMintDashboard: React.FC = () => {
   const standardMintPrice = standardCollection?.mintPrice;
   const proMintPrice = proCollection?.mintPrice;
 
-  const whitelistBlockedStandard = isWhitelisted === true && whitelistMintActiveStandard === false;
-  const whitelistBlockedPro = isWhitelisted === true && whitelistMintActivePro === false;
-  const whitelistReadyStandard = isWhitelisted === true && whitelistMintActiveStandard === true;
-  const whitelistReadyPro = isWhitelisted === true && whitelistMintActivePro === true;
-
-  const mintingWindowOpenStandard =
-    isWhitelisted === true ? whitelistReadyStandard || publicMintActiveStandard === true : publicMintActiveStandard === true;
-  const mintingWindowOpenPro =
-    isWhitelisted === true ? whitelistReadyPro || publicMintActivePro === true : publicMintActivePro === true;
+  // Minting logic based on requirements:
+  // 1. Whitelisted users can mint when whitelist minting is active OR public minting is active
+  // 2. Non-whitelisted users can only mint when public minting is active
+  // 3. Disable if non-whitelisted and only whitelist minting is active
+  
+  const canMint = isWhitelisted === true 
+    ? (isWhitelistMintActive === true || isPublicMintActive === true)  // Whitelisted: can mint if either is active
+    : (isPublicMintActive === true);  // Non-whitelisted: can only mint if public is active
+  
+  // For backward compatibility, keep per-collection checks but use global status
+  const mintingWindowOpenStandard = canMint;
+  const mintingWindowOpenPro = canMint;
+  
+  // Blocked states (for display purposes)
+  const whitelistBlockedStandard = isWhitelisted === true && isWhitelistMintActive === false && isPublicMintActive === false;
+  const whitelistBlockedPro = isWhitelisted === true && isWhitelistMintActive === false && isPublicMintActive === false;
 
   const isStatusLoading =
-    isLoadingMintActiveStandard ||
-    isLoadingMintActivePro ||
-    isLoadingWhitelistActiveStandard ||
-    isLoadingWhitelistActivePro ||
-    isLoadingWhitelistStatus ||
+    isLoadingGlobalWhitelistMintActive ||
+    isLoadingGlobalPublicMintActive ||
+    isLoadingWhitelistStatusByAddress ||
     isLoadingBalance ||
     isLoadingUserInfo ||
     (!usdtEnvAddress && isLoadingUsdtMeta);
@@ -181,7 +263,7 @@ const NFTMintDashboard: React.FC = () => {
     
     // Mint prices are always stored in USDT units (6 decimals)
     // This is independent of the actual USDT token decimals
-    const decimals = 6;
+    const decimals = 18;
     
     // Use bigint division for precision
     const divisor = BigInt(10 ** decimals);
@@ -361,7 +443,9 @@ const NFTMintDashboard: React.FC = () => {
 
   const handleMintAfterApprove = async (collectionId: number, user: string) => {
     try {
-      if (isWhitelisted) {
+      // Use whitelistMint if user is whitelisted AND whitelist minting is active
+      // Otherwise use publicMint (for both whitelisted users when only public is active, and non-whitelisted users)
+      if (isWhitelisted === true && isWhitelistMintActive === true) {
         await whitelistMint(user, collectionId);
       } else {
         await publicMint(user, collectionId);
@@ -392,12 +476,8 @@ const NFTMintDashboard: React.FC = () => {
       return;
     }
 
-    const whitelistReadyLocal =
-      (collectionId === 1 ? whitelistReadyStandard : whitelistReadyPro) === true;
-    const whitelistBlockedLocal =
-      collectionId === 1 ? whitelistBlockedStandard : whitelistBlockedPro;
-    const mintingWindowOpenLocal =
-      collectionId === 1 ? mintingWindowOpenStandard : mintingWindowOpenPro;
+    // Use global mint status (same for all collections)
+    const mintingWindowOpenLocal = canMint;
 
     // const mintingAllowed =
     //   !hasMinted &&
@@ -497,6 +577,98 @@ const NFTMintDashboard: React.FC = () => {
         Mint a Polynado NFT and lock in lifetime Pro access. No subscriptions, no renewals, no bs. Choose Standard or Pro tier to unlock AI-powered market intelligence that spots opportunities 18-36 hours before everyone else. This isn't a rental. This is ownership.
         </p>
       </div>
+
+      {/* Whitelist Status Section */}
+      {!isLoadingUserDetails && userDetails && (
+        <div className="mb-8 xl:mb-12 fullhd:mb-16">
+          <div
+            className="rounded-xl overflow-hidden p-6"
+            style={{
+              borderColor: '#6C6C6C',
+              borderWidth: '1px',
+              borderStyle: 'solid',
+            }}
+          >
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-white mb-2">Whitelist Status</h2>
+                {userDetails.isWhitelisted ? (
+                  <div className="flex items-center gap-2">
+                    <CheckCircleOutlined className="text-green-500 text-lg" />
+                    <span className="text-green-400 font-semibold">You are whitelisted</span>
+                  </div>
+                ) : whitelistRequestStatus ? (
+                  <div className="flex items-center gap-2">
+                    {whitelistRequestStatus === 'rejected' ? (
+                      <>
+                        <CloseCircleOutlined className="text-red-500 text-lg" />
+                        <span className="text-red-400 font-semibold">
+                          Status: {whitelistRequestStatus.charAt(0).toUpperCase() + whitelistRequestStatus.slice(1)}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <SettingOutlined className="text-yellow-500 text-lg" />
+                        <span className="text-yellow-400 font-semibold">
+                          Status: {whitelistRequestStatus.charAt(0).toUpperCase() + whitelistRequestStatus.slice(1)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <CloseCircleOutlined className="text-red-500 text-lg" />
+                    <span className="text-red-400 font-semibold">You are not whitelisted</span>
+                  </div>
+                )}
+              </div>
+              {!userDetails.isWhitelisted && (
+                <button
+                  onClick={handleRequestWhitelist}
+                  disabled={
+                    isRequestingWhitelist || 
+                    !isConnected || 
+                    !address || 
+                    !!whitelistRequestStatus ||
+                    whitelistRequestStatus === 'rejected'
+                  }
+                  className={`px-6 py-2 rounded-lg font-semibold text-white transition-all duration-150 ${
+                    isRequestingWhitelist || 
+                    !isConnected || 
+                    !address || 
+                    !!whitelistRequestStatus ||
+                    whitelistRequestStatus === 'rejected'
+                      ? 'cursor-not-allowed opacity-50 bg-gray-600'
+                      : 'cursor-pointer hover:brightness-110'
+                  }`}
+                  style={
+                    !isRequestingWhitelist && 
+                    isConnected && 
+                    address && 
+                    !whitelistRequestStatus &&
+                    whitelistRequestStatus !== 'rejected'
+                      ? {
+                          backgroundImage:
+                            'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%), linear-gradient(135deg, #F5A366 0%, #E88A33 25%, #D16300 60%, #B8540A 100%)',
+                          boxShadow:
+                            '3px 4px 5px 0px rgba(219, 122, 35, 0.31), -2px -2px 6px 0px rgba(255, 255, 255, 0.2) inset, 0px 1px 3px 0px rgba(255, 255, 255, 0.3) inset',
+                        }
+                      : {}
+                  }
+                >
+                  {isRequestingWhitelist 
+                    ? 'Requesting...' 
+                    : whitelistRequestStatus === 'rejected'
+                    ? 'Request Rejected'
+                    : whitelistRequestStatus 
+                    ? 'Request Submitted' 
+                    : 'Request for Whitelist'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NFT Tiers Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 xl:gap-12 fullhd:gap-16 mb-8 xl:mb-12 fullhd:mb-16">

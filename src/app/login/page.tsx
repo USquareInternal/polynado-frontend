@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { login, storeToken, storeUserData, getUserData } from '@/services/authService';
+import { login, storeToken, storeUserData, getUserData, getToken } from '@/services/authService';
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -17,6 +17,15 @@ const LoginPage: React.FC = () => {
   const [showWalletConnection, setShowWalletConnection] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Check if user already has auth token on mount - redirect to connect-wallet if they do
+  useEffect(() => {
+    const token = getToken();
+    if (token) {
+      // User has token, redirect to connect-wallet (whitelist)
+      router.push('/connect-wallet');
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

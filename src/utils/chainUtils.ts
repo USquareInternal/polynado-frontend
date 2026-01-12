@@ -18,53 +18,25 @@ import type { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
 
 // --- Custom Chain Definitions ---
-const sonicChain = defineChain({
-    id: 146,
-    name: 'Sonic',
-    nativeCurrency: { name: 'Sonic', symbol: 'S', decimals: 18 },
-    rpcUrls: { default: { http: ['https://rpc.soniclabs.com'] } },
-});
-
-const sonicTestnetChain = defineChain({
-    id: 14601,
-    name: 'Sonic Testnet',
-    nativeCurrency: { name: 'Sonic', symbol: 'S', decimals: 18 },
-    rpcUrls: { default: { http: ['https://rpc.testnet.soniclabs.com'] } },
-    blockExplorers: { default: { name: 'SonicScan', url: 'https://testnet.sonicscan.org' } },
-    testnet: true,
-});
-
-const anvil = defineChain({
-    id: 31337,
-    name: 'anvil',
-    nativeCurrency: { name: 'anvil', symbol: 'A', decimals: 18 },
-    rpcUrls: { default: { http: ['http://127.0.0.1:8545/'] } },
-    testnet: true,
-});
-
-const polygonAmoy = defineChain({
-    id: 80002,
-    name: 'Amoy',
-    nativeCurrency: { name: 'Amoy', symbol: 'Pol', decimals: 18 },
-    rpcUrls: { default: { http: ['https://rpc-amoy.polygon.technology'] } },
-    blockExplorers: { default: { name: 'AmoyPolygon', url: 'https://amoy.polygonscan.com/' } },
-    testnet: true,
+// Kalshi chain - Update with actual chain details if available
+// Note: Kalshi might be using a different chain or L2. Update chain ID and RPC as needed.
+const kalshiChain = defineChain({
+    id: 8453, // Base chain ID (placeholder - update with actual Kalshi chain ID if different)
+    name: 'Kalshi',
+    nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+    rpcUrls: { default: { http: ['https://mainnet.base.org'] } }, // Placeholder - update with actual Kalshi RPC
+    blockExplorers: { default: { name: 'BaseScan', url: 'https://basescan.org' } },
 });
 
 
 // -------------------------------------------------------------------
 // 🛑 FIX 1: STATIC CHAIN ARRAY (REQUIRED for getDefaultConfig typing)
+// Only 3 chains: Polygon, BSC, and Kalshi
 // -------------------------------------------------------------------
 export const allConfiguredChains = [
     bsc,
-    bscTestnet,
     polygon,
-    avalanche,
-    avalancheFuji,
-    sonicChain,
-    sonicTestnetChain,
-    anvil,
-    polygonAmoy,
+    kalshiChain,
 ] as const;
 // -------------------------------------------------------------------
 
@@ -78,16 +50,9 @@ export const getNetwork = (): Chain => {
     }
 
     switch (chainId) {
-        // ... (all chain switch cases remain here)
         case "bsc": return bsc;
-        case "bscTestnet": return bscTestnet;
         case "polygon": return polygon;
-        case "polygonAmoy": return polygonAmoy;
-        case "avax": return avalanche;
-        case "avaxFuji": return avalancheFuji;
-        case "sonic": return sonicChain;
-        case "sonicTestnet": return sonicTestnetChain;
-        case "anvil": return anvil;
+        case "kalshi": return kalshiChain;
         default:
             throw new Error(`Unsupported chain ID: ${chainId}`);
     }
@@ -95,10 +60,18 @@ export const getNetwork = (): Chain => {
 
 // Single source of truth for the selected chain based on the env var.
 const selectedChain = getNetwork();
-const chains = [selectedChain] as [Chain];
-const transports = {
-    [selectedChain.id]: http(selectedChain.rpcUrls.default.http[0]),
-} as const;
+
+// Include all configured chains for network switching support
+const chains = allConfiguredChains as readonly [Chain, ...Chain[]];
+
+// Configure transports for all chains
+const transports: Record<number, ReturnType<typeof http>> = {};
+allConfiguredChains.forEach((chain) => {
+    const rpcUrl = chain.rpcUrls?.default?.http?.[0];
+    if (rpcUrl) {
+        transports[chain.id] = http(rpcUrl);
+    }
+});
 
 // ... (getWalletSymbol and getWalletChainId utilities remain here)
 

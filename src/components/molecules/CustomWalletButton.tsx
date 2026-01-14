@@ -248,21 +248,21 @@ export const CustomWalletButton: React.FC<CustomWalletButtonProps> = ({ onConnec
 
           {/* Network Dropdown */}
           {showNetworkDropdown && (
-            <div className="absolute top-full right-0 mt-2 w-64 bg-[#1E2022] border border-gray-700/50 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-              <div className="p-0">
-                <div className="text-sm text-white font-semibold px-4 py-3 bg-[#1E2022] border-b border-gray-700/50">Switch Network</div>
-                <div className="divide-y divide-gray-700/50">
+            <div className="absolute top-full right-0 mt-2 w-64 bg-black/80 backdrop-blur-xl border border-gray-700/30 rounded-xl shadow-2xl z-50 max-h-96 overflow-y-auto">
+              <div className="p-2">
+                <div className="text-sm text-white font-semibold px-3 py-2.5 mb-1 text-center">Switch Network</div>
+                <div className="space-y-1">
                   {allConfiguredChains.map((chain) => (
                     <button
                       key={chain.id}
                       onClick={() => handleSwitchNetwork(chain.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 transition-colors ${
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                         chain.id === chainId 
-                          ? 'bg-gradient-to-b from-[#F5A366] to-[#D16300]' 
-                          : 'bg-gradient-to-b from-[#F5A366] to-[#D16300] hover:opacity-90'
+                          ? 'bg-gradient-to-r from-[#F5A366]/90 to-[#D16300]/90 border border-[#F5A366]/50 shadow-md shadow-[#F5A366]/20' 
+                          : 'bg-transparent hover:bg-gray-800/30 border border-transparent hover:border-gray-700/30'
                       }`}
                     >
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-[#1E2022] flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-gray-900/50 flex-shrink-0 border border-gray-700/30">
                         <Image
                           src={getChainImage(chain.id)}
                           alt={chain.name}
@@ -283,7 +283,7 @@ export const CustomWalletButton: React.FC<CustomWalletButtonProps> = ({ onConnec
                       <div className="flex-1 text-left min-w-0">
                         <div className="text-sm text-white font-medium truncate">{chain.name}</div>
                         {chain.id === chainId && (
-                          <div className="text-xs text-white/80 font-medium">Connected</div>
+                          <div className="text-xs text-white/70 font-normal mt-0.5">Connected</div>
                         )}
                       </div>
                     </button>

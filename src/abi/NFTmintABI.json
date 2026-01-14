@@ -59,6 +59,11 @@
 				"internalType": "address",
 				"name": "_usdtToken",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_whitelistVault",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -615,6 +620,19 @@
 			}
 		],
 		"name": "setWhitelistMintActive",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_newVault",
+				"type": "address"
+			}
+		],
+		"name": "setWhitelistVault",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -1181,6 +1199,19 @@
 				"internalType": "bool",
 				"name": "",
 				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "whitelistVault",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",

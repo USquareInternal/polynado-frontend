@@ -1,6 +1,6 @@
 // src/services/marketService.ts
 
-const API_BASE_URL = 'https://polynado-backend-n2he.onrender.com';
+const API_BASE_URL = 'https://polynado-backend-testnet.onrender.com';
 
 export interface MarketData {
   id: string;

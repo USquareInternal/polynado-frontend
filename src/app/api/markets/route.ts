@@ -4,7 +4,7 @@
 // data from the Polynado backend API, bypassing CORS restrictions.
 
 export async function GET() {
-    const EXTERNAL_API_URL = 'https://polynado-backend-n2he.onrender.com/api/markets';
+    const EXTERNAL_API_URL = 'https://polynado-backend-testnet.onrender.com/api/markets';
 
     try {
         // 1. Fetch data from the Polynado backend API (Server-to-Server request)

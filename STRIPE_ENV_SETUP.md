@@ -34,7 +34,7 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 
 # Backend API URL (Optional - defaults to existing backend)
 # The webhook will call this endpoint to activate subscriptions
-BACKEND_API_URL=https://polynado-backend-n2he.onrender.com
+BACKEND_API_URL=https://polynado-backend-testnet.onrender.com
 ```
 
 ### For Production
@@ -68,7 +68,7 @@ STRIPE_WEBHOOK_SECRET=whsec_YOUR_LIVE_WEBHOOK_SECRET_HERE
 NEXT_PUBLIC_BASE_URL=https://yourdomain.com
 
 # Backend API URL (Production)
-BACKEND_API_URL=https://polynado-backend-n2he.onrender.com
+BACKEND_API_URL=https://polynado-backend-testnet.onrender.com
 ```
 
 ## How to Get Stripe Keys

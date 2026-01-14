@@ -144,6 +144,10 @@ const NFTMintDashboard: React.FC = () => {
   const authHasStandardNFT = authUserData?.isMintedStandardNFT === true;
   const authHasProNFT = authUserData?.isMintedProNFT === true;
   
+  // Use user details API data (preferred source)
+  const apiHasStandardNFT = userDetails?.isMintedStandardNFT === true;
+  const apiHasProNFT = userDetails?.isMintedProNFT === true;
+  
   // Check which NFTs user has minted from mintedColls (mapped to collectionIds)
   // Handle both bigint and number types
   const collectionIds = Array.isArray(userInfo?.collectionIds) ? userInfo.collectionIds : [];
@@ -156,8 +160,9 @@ const NFTMintDashboard: React.FC = () => {
     return numId === 2;
   });
 
-  const hasStandardNFT = hasStandardNFTOnChain || authHasStandardNFT;
-  const hasProNFT = hasProNFTOnChain || authHasProNFT;
+  // Priority: API data > On-chain data > Auth fallback
+  const hasStandardNFT = apiHasStandardNFT || hasStandardNFTOnChain || authHasStandardNFT;
+  const hasProNFT = apiHasProNFT || hasProNFTOnChain || authHasProNFT;
 
 
   // Check USDT allowance
@@ -337,7 +342,8 @@ const NFTMintDashboard: React.FC = () => {
     pendingCollectionId === 2 &&
     (mintingStep === 'approving' || mintingStep === 'minting' || isApproving || isMinting);
 
-  // Standard button: disabled if Pro NFT Minted OR Standard NFT is minted
+  // Standard button: disabled only if Pro NFT Minted (can't downgrade from Pro)
+  // Users with Standard NFT can upgrade to Pro, but can't mint Standard again
   // Enable button as soon as critical data is available, don't wait for all status checks
   const standardButtonEnabled =
     isConnected &&
@@ -349,11 +355,13 @@ const NFTMintDashboard: React.FC = () => {
     // Only wait for critical loading states: user info (to check NFTs) and mint price
     !isLoadingUserInfo &&
     !isLoadingStandardCollection &&
+    !isLoadingUserDetails && // Wait for user details API to load
     // Don't wait for other status checks - they can load in background
-    !hasStandardNFT &&
-    !hasProNFT; // Disable if Pro NFT Minted
+    !hasStandardNFT && // Can't mint Standard if already has Standard
+    !hasProNFT; // Can't downgrade from Pro to Standard
 
   // Pro button: disabled only if Pro NFT Minted (can upgrade from Standard)
+  // Users with Standard NFT can upgrade to Pro
   // Enable button as soon as critical data is available, don't wait for all status checks
   const proButtonEnabled =
     isConnected &&
@@ -365,8 +373,9 @@ const NFTMintDashboard: React.FC = () => {
     // Only wait for critical loading states: user info (to check NFTs) and mint price
     !isLoadingUserInfo &&
     !isLoadingProCollection &&
+    !isLoadingUserDetails && // Wait for user details API to load
     // Don't wait for other status checks - they can load in background
-    !hasProNFT; // Only disable if Pro NFT Minted (Standard NFT doesn't block Pro)
+    !hasProNFT; // Only disable if Pro NFT Minted (Standard NFT doesn't block Pro - can upgrade)
 
   const showLoader =
     isStatusLoading ||
@@ -395,6 +404,16 @@ const NFTMintDashboard: React.FC = () => {
       refetchStandardSupply?.();
       refetchProSupply?.();
       refetchUserInfo?.(); // Refetch user info to update minted collections
+      // Refetch user details from API to update isMintedStandardNFT and isMintedProNFT
+      const loadUserDetails = async () => {
+        try {
+          const response = await fetchUserDetails();
+          setUserDetails(response.user);
+        } catch (error) {
+          console.error('Failed to refetch user details after mint:', error);
+        }
+      };
+      loadUserDetails();
       setPendingCollectionId(null);
       setPendingUserId(null);
     }
@@ -698,7 +717,7 @@ const NFTMintDashboard: React.FC = () => {
           <div className="flex justify-between items-center mb-6" style={{ minHeight: '32px' }}>
             <h3 className="text-xl font-bold text-white">STANDARD TIER</h3>
             <span className="text-xl font-bold text-orange-400">
-              {isLoadingStandardCollection ? '...' : formattedStandardPrice}
+             480 USDT
             </span>
           </div>
 
@@ -755,7 +774,7 @@ const NFTMintDashboard: React.FC = () => {
             {hasProNFT
               ? 'Pro NFT Minted'
               : hasStandardNFT
-              ? 'Standard NFT is Minted'
+              ? 'Standard NFT Minted'
               : !isConnected
               ? 'Connect Wallet'
               : whitelistBlockedStandard
@@ -801,7 +820,7 @@ const NFTMintDashboard: React.FC = () => {
           <div className="flex justify-between items-center mb-6" style={{ minHeight: '32px' }}>
             <h3 className="text-xl font-bold text-white">PRO TIER</h3>
             <span className="text-xl font-bold text-orange-400">
-              {isLoadingProCollection ? '...' : formattedProPrice}
+              2400 USDT
             </span>
           </div>
 

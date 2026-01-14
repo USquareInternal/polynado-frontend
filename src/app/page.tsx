@@ -45,9 +45,9 @@ const DashboardPage: React.FC = () => {
     }
 
     // If authenticated but wallet not connected, redirect to wallet connection
-    if (!isConnected) {
-      router.push('/connect-wallet');
-    }
+    // if (!isConnected) {
+    //   router.push('/connect-wallet');
+    // }
   }, [isConnected, router]);
 
   // Show nothing while checking connection or authentication

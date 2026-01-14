@@ -3,20 +3,15 @@
 
 /**
  * Base API URL for the backend (client-side)
- * Uses environment variable if set, otherwise defaults to production backend.
+ * Uses environment variable if set, otherwise defaults to testnet backend.
  */
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  'https://polynado-backend-n2he.onrender.com';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://polynado-backend-testnet.onrender.com';
 
 /**
  * Server-side API URL (for Next.js API routes)
- * Uses environment variable if set, otherwise defaults to production backend.
+ * Uses environment variable if set, otherwise defaults to testnet backend.
  */
-export const SERVER_API_BASE_URL =
-  process.env.BACKEND_API_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  'https://polynado-backend-n2he.onrender.com';
+export const SERVER_API_BASE_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || 'https://polynado-backend-testnet.onrender.com';
 
 /**
  * All API endpoints in one place.

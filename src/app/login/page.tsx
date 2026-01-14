@@ -21,10 +21,10 @@ const LoginPage: React.FC = () => {
   // Check if user already has auth token on mount - redirect to connect-wallet if they do
   useEffect(() => {
     const token = getToken();
-    if (token) {
-      // User has token, redirect to connect-wallet (whitelist)
-      router.push('/connect-wallet');
-    }
+    // if (token) {
+    //   // User has token, redirect to connect-wallet (whitelist)
+    //   router.push('/connect-wallet');
+    // }
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {

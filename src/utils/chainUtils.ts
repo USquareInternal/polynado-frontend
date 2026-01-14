@@ -24,6 +24,7 @@ import type { getDefaultConfig } from "@rainbow-me/rainbowkit";
 export const allConfiguredChains = [
     bsc,
     polygon,
+    bscTestnet,
 ] as const;
 // -------------------------------------------------------------------
 
@@ -39,6 +40,7 @@ export const getNetwork = (): Chain => {
     switch (chainId) {
         case "bsc": return bsc;
         case "polygon": return polygon;
+        case "bscTestnet": return bscTestnet;
         default:
             throw new Error(`Unsupported chain ID: ${chainId}`);
     }

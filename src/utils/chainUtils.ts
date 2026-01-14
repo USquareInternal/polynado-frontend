@@ -17,26 +17,13 @@ import {
 import type { getDefaultConfig } from "@rainbow-me/rainbowkit";
 
 
-// --- Custom Chain Definitions ---
-// Kalshi chain - Update with actual chain details if available
-// Note: Kalshi might be using a different chain or L2. Update chain ID and RPC as needed.
-const kalshiChain = defineChain({
-    id: 8453, // Base chain ID (placeholder - update with actual Kalshi chain ID if different)
-    name: 'Kalshi',
-    nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
-    rpcUrls: { default: { http: ['https://mainnet.base.org'] } }, // Placeholder - update with actual Kalshi RPC
-    blockExplorers: { default: { name: 'BaseScan', url: 'https://basescan.org' } },
-});
-
-
 // -------------------------------------------------------------------
 // 🛑 FIX 1: STATIC CHAIN ARRAY (REQUIRED for getDefaultConfig typing)
-// Only 3 chains: Polygon, BSC, and Kalshi
+// Only 2 chains: Polygon and BSC
 // -------------------------------------------------------------------
 export const allConfiguredChains = [
     bsc,
     polygon,
-    kalshiChain,
 ] as const;
 // -------------------------------------------------------------------
 
@@ -52,7 +39,6 @@ export const getNetwork = (): Chain => {
     switch (chainId) {
         case "bsc": return bsc;
         case "polygon": return polygon;
-        case "kalshi": return kalshiChain;
         default:
             throw new Error(`Unsupported chain ID: ${chainId}`);
     }

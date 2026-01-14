@@ -1,6 +1,9 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { WalletOutlined, LineChartOutlined, DollarCircleOutlined, TrophyOutlined } from '@ant-design/icons';
+import { useAccount } from 'wagmi';
+import { fetchPortfolio } from '@/services/portfolioService';
+import Spinner from '@/components/atoms/Spinner';
 
 interface SummaryCardProps {
   icon: React.ReactNode;
@@ -72,32 +75,112 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   );
 };
 
+// Format currency value
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+// Format percentage
+const formatPercentage = (value: number): string => {
+  return `${(value * 100).toFixed(1)}%`;
+};
+
+// Get color based on value (green for positive, red for negative)
+const getPnLColor = (value: number): string => {
+  return value >= 0 ? '#5CD974' : '#DF261C';
+};
+
 export const PortfolioSummary: React.FC = () => {
+  const { address } = useAccount();
+  const [totalValue, setTotalValue] = useState<number>(0);
+  const [unrealizedPnL, setUnrealizedPnL] = useState<number>(0);
+  const [realizedPnL, setRealizedPnL] = useState<number>(0);
+  const [winRate, setWinRate] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPortfolio = async () => {
+      if (!address) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const portfolioData = await fetchPortfolio(address);
+        
+        setTotalValue(portfolioData.totalValue || 0);
+        setUnrealizedPnL(portfolioData.unrealizedPnL || 0);
+        setRealizedPnL(portfolioData.realizedPnL || 0);
+        setWinRate(portfolioData.winRate || 0);
+      } catch (err) {
+        console.error('Failed to load portfolio summary:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load portfolio data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPortfolio();
+  }, [address]);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-6 fullhd:gap-8">
+        {[1, 2, 3, 4].map((i) => (
+          <div 
+            key={i}
+            className="bg-[#1E2022] border border-orange-500/60 rounded-xl p-5"
+            style={{ minHeight: '110px' }}
+          >
+            <div className="flex justify-center items-center h-full">
+              <Spinner visible={true} size="sm" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-400 py-4">
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 xl:gap-6 fullhd:gap-8">
       <SummaryCard
         icon={<WalletOutlined />}
-        value="$1,289.50"
-        change="+8.2%"
+        value={formatCurrency(totalValue)}
         label="Total Value"
         valueColor="#D16300"
-        changeColor="text-green-500"
       />
       <SummaryCard
         icon={<LineChartOutlined />}
-        value="$1,289.50"
+        value={formatCurrency(unrealizedPnL)}
         label="Current PnL"
-        valueColor="#5CD974"
+        valueColor={getPnLColor(unrealizedPnL)}
       />
       <SummaryCard
         icon={<DollarCircleOutlined />}
-        value="$450.30"
+        value={formatCurrency(realizedPnL)}
         label="Realized PnL"
-        valueColor="#5CD974"
+        valueColor={getPnLColor(realizedPnL)}
       />
       <SummaryCard
         icon={<TrophyOutlined />}
-        value="68%"
+        value={formatPercentage(winRate)}
         label="Win Rate"
         valueColor="#D16300"
       />

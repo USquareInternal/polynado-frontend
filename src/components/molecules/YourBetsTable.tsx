@@ -1,125 +1,35 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
+import { useAccount } from 'wagmi';
+import { fetchPortfolio, BetData } from '@/services/portfolioService';
+import Spinner from '@/components/atoms/Spinner';
 
 interface Bet {
   id: string;
-  category: string;
   marketQuestion: string;
-  yourPick: 'Yes' | 'No';
+  yourPick: string;
   entryPrice: number;
   currentPrice: number;
   profitLoss: number;
-  profitLossPercent: number;
   status: 'ACTIVE' | 'WIN' | 'LOSS';
+  icon?: string;
 }
 
-const mockBets: Bet[] = [
-  {
-    id: '1',
-    category: 'Crypto',
-    marketQuestion: 'Bitcoin To Reach $100K By EOY 2025?',
-    yourPick: 'Yes',
-    entryPrice: 107,
-    currentPrice: 112,
-    profitLoss: 5,
-    profitLossPercent: 5.10,
-    status: 'ACTIVE',
-  },
-  {
-    id: '2',
-    category: 'Sports',
-    marketQuestion: 'Will Messi Return To Barcelona?',
-    yourPick: 'No',
-    entryPrice: 260,
-    currentPrice: 297.96,
-    profitLoss: 37.96,
-    profitLossPercent: 14.6,
-    status: 'ACTIVE',
-  },
-  {
-    id: '3',
-    category: 'Sports',
-    marketQuestion: 'Lakers To Win NBA Championship 2025?',
-    yourPick: 'Yes',
-    entryPrice: 133,
-    currentPrice: 121.03,
-    profitLoss: -11.97,
-    profitLossPercent: -9,
-    status: 'ACTIVE',
-  },
-  {
-    id: '4',
-    category: 'Sports',
-    marketQuestion: 'Fed To Cut Interest Rate In March 2026?',
-    yourPick: 'No',
-    entryPrice: 260,
-    currentPrice: 297.96,
-    profitLoss: 37.96,
-    profitLossPercent: 14.6,
-    status: 'WIN',
-  },
-  {
-    id: '5',
-    category: 'Crypto',
-    marketQuestion: 'Bitcoin To Reach $100K By EOY 2025?',
-    yourPick: 'Yes',
-    entryPrice: 107,
-    currentPrice: 112,
-    profitLoss: 5,
-    profitLossPercent: 5.10,
-    status: 'WIN',
-  },
-  {
-    id: '6',
-    category: 'Sports',
-    marketQuestion: 'Will Messi Return To Barcelona?',
-    yourPick: 'No',
-    entryPrice: 260,
-    currentPrice: 297.96,
-    profitLoss: 37.96,
-    profitLossPercent: 14.6,
-    status: 'WIN',
-  },
-  {
-    id: '7',
-    category: 'Sports',
-    marketQuestion: 'Lakers To Win NBA Championship 2025?',
-    yourPick: 'Yes',
-    entryPrice: 133,
-    currentPrice: 121.03,
-    profitLoss: -11.97,
-    profitLossPercent: -9,
-    status: 'LOSS',
-  },
-  {
-    id: '8',
-    category: 'Sports',
-    marketQuestion: 'Fed To Cut Interest Rate In March 2026?',
-    yourPick: 'No',
-    entryPrice: 260,
-    currentPrice: 297.96,
-    profitLoss: 37.96,
-    profitLossPercent: 14.6,
-    status: 'WIN',
-  },
-  {
-    id: '9',
-    category: 'Sports',
-    marketQuestion: 'Lakers To Win NBA Championship 2025?',
-    yourPick: 'Yes',
-    entryPrice: 133,
-    currentPrice: 121.03,
-    profitLoss: -11.97,
-    profitLossPercent: -9,
-    status: 'LOSS',
-  },
-];
-
-const formatPrice = (price: number, symbol: 'c' | '¢' = 'c') => {
-  const formatted = price.toFixed(2).replace(/\.00$/, '');
-  return `${formatted}${symbol}`;
+// Map API data to Bet format (direct mapping since API already provides the fields)
+const mapBetDataToBet = (betData: BetData, index: number): Bet => {
+  return {
+    id: `bet-${index}`,
+    marketQuestion: betData.market.title || '',
+    yourPick: betData.yourPick || 'Unknown',
+    entryPrice: betData.entryPrice,
+    currentPrice: betData.currentPrice,
+    profitLoss: betData.profitLoss,
+    status: betData.status,
+    icon: betData.market.icon,
+  };
 };
+
 
 const StatusBadge: React.FC<{ status: Bet['status'] }> = ({ status }) => {
   const getStatusStyle = (status: Bet['status']) => {
@@ -162,6 +72,93 @@ const StatusBadge: React.FC<{ status: Bet['status'] }> = ({ status }) => {
 };
 
 export const YourBetsTable: React.FC = () => {
+  const { address } = useAccount();
+  const [bets, setBets] = useState<Bet[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPortfolio = async () => {
+      if (!address) {
+        setIsLoading(false);
+        setError('Please connect your wallet to view your bets');
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const portfolioData = await fetchPortfolio(address);
+        
+        // Combine both activeBets and closedBets into a single array
+        const allBets = [
+          ...(portfolioData.activeBets || []),
+          ...(portfolioData.closedBets || [])
+        ];
+        
+        // Map bet data to Bet format
+        const mappedBets = allBets.map((betData, index) => 
+          mapBetDataToBet(betData, index)
+        );
+        
+        setBets(mappedBets);
+      } catch (err) {
+        console.error('Failed to load portfolio:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load your bets');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPortfolio();
+  }, [address]);
+
+  if (isLoading) {
+    return (
+      <div className="overflow-hidden">
+        <div className="mb-6 xl:mb-8">
+          <h2 className="text-xl xl:text-2xl fullhd:text-3xl font-bold text-white">
+            Your Bets
+          </h2>
+        </div>
+        <div className="flex justify-center items-center py-12">
+          <Spinner visible={true} size="md" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="overflow-hidden">
+        <div className="mb-6 xl:mb-8">
+          <h2 className="text-xl xl:text-2xl fullhd:text-3xl font-bold text-white">
+            Your Bets
+          </h2>
+        </div>
+        <div className="text-center text-red-400 py-8">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (bets.length === 0) {
+    return (
+      <div className="overflow-hidden">
+        <div className="mb-6 xl:mb-8">
+          <h2 className="text-xl xl:text-2xl fullhd:text-3xl font-bold text-white">
+            Your Bets
+          </h2>
+        </div>
+        <div className="text-center text-gray-400 py-8">
+          No bets found. Start placing bets to see them here.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden">
       <div className="mb-6 xl:mb-8">
@@ -200,15 +197,25 @@ export const YourBetsTable: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700">
-            {mockBets.map((bet, index) => (
+            {bets.map((bet, index) => (
               <tr
                 key={bet.id}
                 className="hover:bg-white/5 transition-colors"
                 style={{ backgroundColor: index % 2 === 0 ? '#000000' : '#1E2022' }}
               >
                 <td className="px-4 xl:px-6 fullhd:px-8 py-4 xl:py-5">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-gray-400 uppercase">{bet.category}</span>
+                  <div className="flex items-center gap-3">
+                    {bet.icon && (
+                      <img 
+                        src={bet.icon} 
+                        alt={bet.marketQuestion}
+                        className="w-10 h-10 xl:w-12 xl:h-12 rounded-lg object-cover flex-shrink-0"
+                        onError={(e) => {
+                          // Hide image if it fails to load
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
                     <span className="text-sm xl:text-base text-white font-medium">
                       {bet.marketQuestion}
                     </span>
@@ -216,7 +223,7 @@ export const YourBetsTable: React.FC = () => {
                 </td>
                 <td className="px-4 xl:px-6 fullhd:px-8 py-4 xl:py-5">
                   <div className="flex items-center gap-2">
-                    {bet.yourPick === 'Yes' ? (
+                    {bet.yourPick === 'Yes' || bet.yourPick?.toLowerCase() === 'yes' ? (
                       <LikeOutlined className="text-white" />
                     ) : (
                       <DislikeOutlined className="text-white" />
@@ -225,10 +232,10 @@ export const YourBetsTable: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-4 xl:px-6 fullhd:px-8 py-4 xl:py-5 text-sm xl:text-base text-white">
-                  {formatPrice(bet.entryPrice, 'c')}
+                  {bet.entryPrice.toFixed(4)}
                 </td>
                 <td className="px-4 xl:px-6 fullhd:px-8 py-4 xl:py-5 text-sm xl:text-base text-white">
-                  {formatPrice(bet.currentPrice, '¢')}
+                  {bet.currentPrice.toFixed(4)}
                 </td>
                 <td className="px-4 xl:px-6 fullhd:px-8 py-4 xl:py-5">
                   <span
@@ -237,8 +244,7 @@ export const YourBetsTable: React.FC = () => {
                     }`}
                   >
                     {bet.profitLoss >= 0 ? '+' : ''}
-                    {formatPrice(Math.abs(bet.profitLoss), 'c')} ({bet.profitLossPercent >= 0 ? '+' : ''}
-                    {bet.profitLossPercent.toFixed(1)}%)
+                    ${bet.profitLoss.toFixed(2)}
                   </span>
                 </td>
                 <td className="px-4 xl:px-6 fullhd:px-8 py-4 xl:py-5">

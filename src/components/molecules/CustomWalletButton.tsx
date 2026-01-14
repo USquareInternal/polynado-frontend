@@ -43,7 +43,6 @@ const getChainImage = (chainId: number): string => {
   const chainImages: Record<number, string> = {
     56: '/chains/bsc.png', // BSC
     137: '/chains/polygon.png', // Polygon
-    8453: '/chains/kalshi.png', // Kalshi (update with actual chain ID if different)
   };
   return chainImages[chainId] || '/chains/default.png';
 };

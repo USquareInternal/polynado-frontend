@@ -3,8 +3,23 @@
 // This file creates a server-side endpoint at /api/markets that fetches
 // data from the Polynado backend API, bypassing CORS restrictions.
 
-export async function GET() {
-    const EXTERNAL_API_URL = 'https://polynado-backend-testnet.onrender.com/api/markets';
+import { SERVER_API_BASE_URL } from '@/config/apiConfig';
+import { NextRequest } from 'next/server';
+
+// BSC Chain IDs (Mainnet: 56, Testnet: 97)
+const BSC_CHAIN_IDS = [56, 97];
+
+export async function GET(request: NextRequest) {
+    // Get chainId from query parameters
+    const searchParams = request.nextUrl.searchParams;
+    const chainIdParam = searchParams.get('chainId');
+    const chainId = chainIdParam ? parseInt(chainIdParam, 10) : null;
+    
+    // Determine which API endpoint to use based on chain ID
+    const isBSC = chainId !== null && BSC_CHAIN_IDS.includes(chainId);
+    const EXTERNAL_API_URL = isBSC 
+        ? `${SERVER_API_BASE_URL}/api/pancake-markets`
+        : `${SERVER_API_BASE_URL}/api/markets`;
 
     try {
         // 1. Fetch data from the Polynado backend API (Server-to-Server request)
@@ -33,6 +48,7 @@ export async function GET() {
 
         // Log the raw API response
         console.log('=== Markets API Response (Server-side) ===');
+        console.log('Chain ID:', chainId, '| Using API:', isBSC ? 'pancake-markets' : 'markets');
         console.log('Full response:', JSON.stringify(data, null, 2));
         console.log('Response type:', Array.isArray(data) ? 'Array' : typeof data);
         if (Array.isArray(data)) {

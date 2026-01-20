@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   },
   MARKETS: {
     LIST: `${API_BASE_URL}/api/markets`,
+    PANCAKE: `${API_BASE_URL}/api/pancake-markets`,
     PROXY: '/api/markets',
   },
   REFERRAL: {

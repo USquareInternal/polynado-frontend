@@ -1,6 +1,11 @@
 // src/services/marketService.ts
 
-const API_BASE_URL = 'https://polynado-backend-testnet.onrender.com';
+import { API_ENDPOINTS } from '@/config/apiConfig';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://polynado-backend-testnet.onrender.com';
+
+// BSC Chain IDs (Mainnet: 56, Testnet: 97)
+const BSC_CHAIN_IDS = [56, 97];
 
 export interface MarketData {
   id: string;
@@ -33,6 +38,58 @@ export interface MarketsResponse {
   data?: MarketData[];
   markets?: MarketData[];
 }
+
+// PancakeSwap market response structure
+interface PancakeMarketData {
+  id: string;
+  pancakeId: string;
+  question: string;
+  slug: string;
+  yesPrice: number;
+  yesPercentage: number;
+  volume: number;
+  openInterest: number;
+  action: string;
+  currentPrice: number;
+  status: string;
+  endDate: string;
+  outcomes: string[];
+  outcomePrices: number[];
+  liquidity: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PancakeMarketsResponse {
+  message: string;
+  success: boolean;
+  data: PancakeMarketData[];
+}
+
+/**
+ * Maps PancakeSwap market data to MarketData format
+ */
+const mapPancakeToMarketData = (pancakeMarket: PancakeMarketData): MarketData => {
+  // Calculate noPrice from yesPrice
+  const noPrice = 1 - pancakeMarket.yesPrice;
+  const noPercentage = 100 - pancakeMarket.yesPercentage;
+  
+  return {
+    id: pancakeMarket.id,
+    question: pancakeMarket.question,
+    category: 'PancakeSwap', // Default category for PancakeSwap markets
+    yesPrice: pancakeMarket.yesPrice,
+    yesPercentage: pancakeMarket.yesPercentage,
+    noPercentage: noPercentage,
+    outcomePrices: pancakeMarket.outcomePrices || [pancakeMarket.yesPrice, noPrice],
+    volume: pancakeMarket.volume,
+    volumeNum: pancakeMarket.volume,
+    liquidity: pancakeMarket.liquidity,
+    liquidityNum: pancakeMarket.liquidity,
+    openInterest: pancakeMarket.openInterest.toString(),
+    price: pancakeMarket.currentPrice,
+  };
+};
 
 /**
  * Fetches all markets from the Polynado backend API
@@ -71,10 +128,13 @@ export const fetchMarkets = async (): Promise<MarketData[]> => {
 
 /**
  * Fetches markets through the Next.js API route (proxy)
+ * @param chainId Optional chain ID to determine which API to use (BSC uses pancake-markets)
  */
-export const fetchMarketsViaProxy = async (): Promise<MarketData[]> => {
+export const fetchMarketsViaProxy = async (chainId?: number): Promise<MarketData[]> => {
   try {
-    const response = await fetch('/api/markets', {
+    // Build query string with chainId if provided
+    const queryParams = chainId ? `?chainId=${chainId}` : '';
+    const response = await fetch(`/api/markets${queryParams}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -86,42 +146,31 @@ export const fetchMarketsViaProxy = async (): Promise<MarketData[]> => {
       throw new Error(`Failed to fetch markets: ${response.statusText}`);
     }
 
-    const data: MarketsResponse = await response.json();
+    const data: MarketsResponse | PancakeMarketsResponse = await response.json();
 
     // Log the response received by the client
     console.log('=== Markets API Response (Client-side) ===');
+    console.log('Chain ID:', chainId);
     console.log('Full response:', JSON.stringify(data, null, 2));
     console.log('Response type:', Array.isArray(data) ? 'Array' : typeof data);
-    if (Array.isArray(data)) {
-      console.log('Number of markets:', data.length);
-      if (data.length > 0) {
-        console.log('First market sample:', JSON.stringify(data[0], null, 2));
-        console.log('First market outcomePrices:', data[0].outcomePrices);
-        console.log('First market outcomePrices type:', typeof data[0].outcomePrices);
-      }
-    } else if (data.data && Array.isArray(data.data)) {
-      console.log('Number of markets (in data.data):', data.data.length);
-      if (data.data.length > 0) {
-        console.log('First market sample:', JSON.stringify(data.data[0], null, 2));
-        console.log('First market outcomePrices:', data.data[0].outcomePrices);
-        console.log('First market outcomePrices type:', typeof data.data[0].outcomePrices);
-      }
-    } else if (data.markets && Array.isArray(data.markets)) {
-      console.log('Number of markets (in data.markets):', data.markets.length);
-      if (data.markets.length > 0) {
-        console.log('First market sample:', JSON.stringify(data.markets[0], null, 2));
-        console.log('First market outcomePrices:', data.markets[0].outcomePrices);
-        console.log('First market outcomePrices type:', typeof data.markets[0].outcomePrices);
-      }
-    }
-    console.log('==========================================');
 
     // Handle different response structures
     let markets: MarketData[] = [];
-    if (data.success && data.data) {
-      markets = data.data;
-    } else if (data.success && data.markets) {
-      markets = data.markets;
+    
+    // Check if it's a PancakeSwap response
+    if ('success' in data && data.success && 'data' in data && Array.isArray(data.data)) {
+      const pancakeData = data as PancakeMarketsResponse;
+      // Check if first item has pancakeId (PancakeSwap format)
+      if (pancakeData.data.length > 0 && 'pancakeId' in pancakeData.data[0]) {
+        // Map PancakeSwap markets to MarketData format
+        markets = pancakeData.data.map(mapPancakeToMarketData);
+        console.log('PancakeSwap markets mapped:', markets.length);
+      } else {
+        // Regular markets response
+        markets = pancakeData.data as MarketData[];
+      }
+    } else if ('success' in data && data.success && 'markets' in data && Array.isArray(data.markets)) {
+      markets = (data as MarketsResponse).markets || [];
     } else if (Array.isArray(data)) {
       markets = data as MarketData[];
     } else {
@@ -129,6 +178,11 @@ export const fetchMarketsViaProxy = async (): Promise<MarketData[]> => {
     }
 
     console.log('Processed markets count:', markets.length);
+    if (markets.length > 0) {
+      console.log('First market sample:', JSON.stringify(markets[0], null, 2));
+    }
+    console.log('==========================================');
+
     return markets;
   } catch (error) {
     console.error('Error fetching markets via proxy:', error);

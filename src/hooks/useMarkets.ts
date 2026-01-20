@@ -1,6 +1,7 @@
 // src/hooks/useMarkets.ts
 "use client";
 import { useState, useEffect } from 'react';
+import { useChainId } from 'wagmi';
 import { MarketCardProps } from '@/components/molecules/MarketCard';
 import { fetchMarketsViaProxy, MarketData } from '@/services/marketService';
 
@@ -187,12 +188,10 @@ const mapApiDataToMarketCardProps = (data: MarketApiData | MarketData): MarketCa
  * @returns An object containing the fetched markets, loading state, and error state.
  */
 export const useMarkets = (limit: number = 4) => {
+  const chainId = useChainId();
   const [markets, setMarkets] = useState<MarketCardProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-
-  // ... (rest of the hook remains the same)
 
   useEffect(() => {
     const fetchMarkets = async () => {
@@ -200,8 +199,8 @@ export const useMarkets = (limit: number = 4) => {
         setIsLoading(true);
         setError(null);
 
-        // Fetch markets from the API
-        const apiData = await fetchMarketsViaProxy();
+        // Fetch markets from the API with chainId
+        const apiData = await fetchMarketsViaProxy(chainId);
 
         // Map, filter, and limit the data
         const cardProps = apiData
@@ -220,7 +219,7 @@ export const useMarkets = (limit: number = 4) => {
     };
 
     fetchMarkets();
-  }, [limit]);
+  }, [limit, chainId]);
 
   return { markets, isLoading, error };
 };

@@ -21,10 +21,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { loadStripe } from '@stripe/stripe-js';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { CheckOutlined, CrownOutlined, ThunderboltOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { getUserData, getToken } from '@/services/authService';
+import { getUserData, getToken, fetchUserDetails, UserDetailsResponse } from '@/services/authService';
 import { useUserInfo } from '@/utils/nftContract';
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
-import { API_BASE_URL } from '@/components/organisms/WithdrawalHistory';
+import { API_ENDPOINTS } from '@/config/apiConfig';
 import Spinner from '@/components/atoms/Spinner';
 
 // FRONTEND: Initialize Stripe with publishable key (pk_)
@@ -36,6 +36,8 @@ const SubscriptionPage: React.FC = () => {
   const searchParams = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [authUserData, setAuthUserData] = useState<any>(null);
+  const [userDetails, setUserDetails] = useState<UserDetailsResponse['user'] | null>(null);
+  const [isLoadingUserDetails, setIsLoadingUserDetails] = useState(true);
   const [processingType, setProcessingType] = useState<'standard' | 'pro' | null>(null);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [isSessionVerifying, setIsSessionVerifying] = useState(false);
@@ -43,15 +45,18 @@ const SubscriptionPage: React.FC = () => {
   // FRONTEND: Display prices only (for UI)
   // NOTE: Actual price calculation happens on backend to prevent tampering
   // These values are just for display purposes
-  const standardPrice = 10; // Display: $10/month
-  const proPrice = 20; // Display: $20/month
+  const standardPrice = 20; // Display: $10/month
+  const proPrice = 100; // Display: $20/month
   
   // Get user info to check which NFTs they've minted
   const { userInfo, isLoading: isLoadingUserInfo, refetch: refetchUserInfo } = useUserInfo(userId || undefined);
   
+  // Priority: Use API user details, fallback to localStorage auth data
+  const currentUserData = userDetails || authUserData;
+
   // Fallback flags from auth user data (login response)
-  const authHasStandardNFT = authUserData?.isMintedStandardNFT === true;
-  const authHasProNFT = authUserData?.isMintedProNFT === true;
+  const authHasStandardNFT = currentUserData?.isMintedStandardNFT === true;
+  const authHasProNFT = currentUserData?.isMintedProNFT === true;
 
   // Check which NFTs user has minted (on-chain)
   const hasStandardNFTOnChain = userInfo?.collectionIds?.some(id => {
@@ -67,30 +72,48 @@ const SubscriptionPage: React.FC = () => {
   const hasProNFT = hasProNFTOnChain || authHasProNFT;
   const hasAnyNFT = hasStandardNFT || hasProNFT;
   
-  // Subscription active flags (rely on auth data only, since contract functions are removed)
-  const authIsSubscribedStandard = authUserData?.isSubscribedStandard === true;
-  const authIsSubscribedPro = authUserData?.isSubscribedPro === true;
-
-  const isSubscriptionActive = authIsSubscribedStandard || authIsSubscribedPro;
-  const activeSubscriptionType = authIsSubscribedPro ? 2 : authIsSubscribedStandard ? 1 : 0;
-
-  // Calculate remaining time from auth user data expiry timestamps (fallback while on-chain loads)
-  const calculateRemainingTimeFromAuth = () => {
+  // Check if subscription is active based on expiry timestamps
+  const checkSubscriptionActive = () => {
     const now = Math.floor(Date.now() / 1000); // Current time in seconds
-    let remainingSeconds = 0;
-
-    if (authIsSubscribedPro && authUserData?.proSubscriptionExpiryTimestamp) {
-      const expiry = Number(authUserData.proSubscriptionExpiryTimestamp);
-      remainingSeconds = Math.max(0, expiry - now);
-    } else if (authIsSubscribedStandard && authUserData?.standardSubscriptionExpiryTimestamp) {
-      const expiry = Number(authUserData.standardSubscriptionExpiryTimestamp);
-      remainingSeconds = Math.max(0, expiry - now);
+    
+    // Check Pro subscription
+    if (currentUserData?.proSubscriptionExpiryTimestamp) {
+      const expiry = typeof currentUserData.proSubscriptionExpiryTimestamp === 'string' 
+        ? Math.floor(new Date(currentUserData.proSubscriptionExpiryTimestamp).getTime() / 1000)
+        : Number(currentUserData.proSubscriptionExpiryTimestamp);
+      if (expiry > now) {
+        return { active: true, type: 2, expiry };
+      }
     }
+    
+    // Check Standard subscription
+    if (currentUserData?.standardSubscriptionExpiryTimestamp) {
+      const expiry = typeof currentUserData.standardSubscriptionExpiryTimestamp === 'string'
+        ? Math.floor(new Date(currentUserData.standardSubscriptionExpiryTimestamp).getTime() / 1000)
+        : Number(currentUserData.standardSubscriptionExpiryTimestamp);
+      if (expiry > now) {
+        return { active: true, type: 1, expiry };
+      }
+    }
+    
+    return { active: false, type: 0, expiry: null };
+  };
 
+  const subscriptionStatus = checkSubscriptionActive();
+  const isSubscriptionActive = subscriptionStatus.active;
+  const activeSubscriptionType = subscriptionStatus.type;
+  const subscriptionExpiry = subscriptionStatus.expiry;
+
+  // Calculate remaining time from expiry timestamp
+  const calculateRemainingTime = () => {
+    if (!subscriptionExpiry) return null;
+    
+    const now = Math.floor(Date.now() / 1000);
+    const remainingSeconds = Math.max(0, subscriptionExpiry - now);
     return remainingSeconds > 0 ? remainingSeconds : null;
   };
 
-  const authRemainingTime = calculateRemainingTimeFromAuth();
+  const calculatedRemainingTime = calculateRemainingTime();
 
   // Get user ID and auth user data from localStorage
   useEffect(() => {
@@ -106,6 +129,37 @@ const SubscriptionPage: React.FC = () => {
       console.warn('[Subscription Page] No user data found in localStorage');
     }
   }, []);
+
+  // Fetch user details from API
+  useEffect(() => {
+    const loadUserDetails = async () => {
+      const token = getToken();
+      if (!token) {
+        setIsLoadingUserDetails(false);
+        return;
+      }
+
+      try {
+        setIsLoadingUserDetails(true);
+        const response = await fetchUserDetails();
+        if (response.success && response.user) {
+          setUserDetails(response.user);
+          // Update userId if not set
+          if (!userId && response.user.userId) {
+            setUserId(response.user.userId);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch user details:', error);
+        // Don't show error toast here, just log it
+        // User can still see the page with localStorage data
+      } finally {
+        setIsLoadingUserDetails(false);
+      }
+    };
+
+    loadUserDetails();
+  }, [userId]);
 
   // Handle Stripe checkout success/cancel
   useEffect(() => {
@@ -134,7 +188,7 @@ const SubscriptionPage: React.FC = () => {
       }
 
       // Verify the session status (handle both success and direct session_id redirects)
-      fetch(`${API_BASE_URL}/api/stripe/checkout-session?session_id=${sessionId}`, {
+      fetch(`${API_ENDPOINTS.STRIPE.CHECKOUT_SESSION}?session_id=${sessionId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -146,11 +200,20 @@ const SubscriptionPage: React.FC = () => {
           }
           return res.json();
         })
-        .then((data) => {
+        .then(async (data) => {
           const paymentStatus = data.session?.paymentStatus || data.session?.payment_status;
           const sessionStatus = data.session?.status;
 
           if (paymentStatus === 'paid' || sessionStatus === 'complete') {
+            // Refresh user details after successful payment
+            try {
+              const updatedDetails = await fetchUserDetails();
+              if (updatedDetails.success && updatedDetails.user) {
+                setUserDetails(updatedDetails.user);
+              }
+            } catch (error) {
+              console.error('Failed to refresh user details:', error);
+            }
             // Redirect back to subscription with a success flag to ensure toast after routing (toast shown there)
             router.replace('/subscription?paid=1');
           } else if (paymentStatus === 'unpaid' || paymentStatus === 'requires_payment_method' || paymentStatus === 'open') {
@@ -176,10 +239,9 @@ const SubscriptionPage: React.FC = () => {
     }
   }, [searchParams, router]);
 
-  // Update remaining time countdown (use auth data only)
+  // Update remaining time countdown
   useEffect(() => {
-    // Use auth data for remaining time
-    const timeToUse = authRemainingTime;
+    const timeToUse = calculatedRemainingTime;
 
     if (timeToUse && timeToUse > 0) {
       setRemainingTime(timeToUse);
@@ -199,7 +261,7 @@ const SubscriptionPage: React.FC = () => {
     } else {
       setRemainingTime(null);
     }
-  }, [authRemainingTime]);
+  }, [calculatedRemainingTime]);
 
   // Format remaining time
   const formatRemainingTime = (seconds: number): string => {
@@ -263,7 +325,7 @@ const SubscriptionPage: React.FC = () => {
 
       // Call backend API to create checkout session
       // Backend handles: price calculation, secret key usage, session creation
-      const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
+      const response = await fetch(API_ENDPOINTS.STRIPE.CREATE_CHECKOUT_SESSION, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -315,26 +377,23 @@ const SubscriptionPage: React.FC = () => {
   const isProcessing = processingType !== null;
   const isStandardProcessing = processingType === 'standard';
   const isProProcessing = processingType === 'pro';
-  // Optimize: Only disable if we're sure subscription is active or user has NFT
-  // Enable buttons as soon as we know subscription is not active and user has no NFT
-  // This allows buttons to enable faster instead of waiting for all data
+  
+  // Disable both buttons if subscription is active (regardless of type)
+  // Enable buttons if subscription has expired or no subscription exists
   const isStandardDisabled = Boolean(
     isProcessing || 
     !userId || 
-    // Only disable if we've confirmed subscription is active
-    isSubscriptionActive ||
-    // Only disable if we've confirmed user has NFT (after loading completes)
-    (isLoadingUserInfo ? false : hasAnyNFT)
+    isSubscriptionActive || // Disable if any subscription is active
+    (isLoadingUserInfo ? false : hasAnyNFT) // Disable if user has NFT
   );
   const isProDisabled = Boolean(
     isProcessing || 
     !userId || 
-    // Only disable if we've confirmed subscription is active
-    isSubscriptionActive ||
-    // Only disable if we've confirmed user has NFT (after loading completes)
-    (isLoadingUserInfo ? false : hasAnyNFT)
+    isSubscriptionActive || // Disable if any subscription is active
+    (isLoadingUserInfo ? false : hasAnyNFT) // Disable if user has NFT
   );
-  const showLoader = isLoadingUserInfo || isProcessing || isSessionVerifying;
+  
+  const showLoader = isLoadingUserInfo || isLoadingUserDetails || isProcessing || isSessionVerifying;
   return (
     <MainLayout>
       <style dangerouslySetInnerHTML={{__html: `
@@ -494,7 +553,19 @@ const SubscriptionPage: React.FC = () => {
                         <span className="text-green-400 text-sm font-semibold">Active</span>
                       </div>
                       <p className="text-white text-xs mt-1">
-                        Remaining: <span className="font-bold text-green-400">{formatRemainingTime(remainingTime)}</span>
+                        Expires in: <span className="font-bold text-green-400">{formatRemainingTime(remainingTime)}</span>
+                      </p>
+                    </div>
+                  )}
+                  {/* Show message if subscription is active but not Standard */}
+                  {isSubscriptionActive && activeSubscriptionType !== 1 && (
+                    <div className="mt-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/10">
+                      <div className="flex items-center gap-2">
+                        <CloseCircleOutlined className="text-orange-400 text-sm" />
+                        <span className="text-orange-400 text-sm font-semibold">Pro Subscription Active</span>
+                      </div>
+                      <p className="text-white text-xs mt-1">
+                        You have an active Pro subscription. Cancel or wait for it to expire to subscribe to Standard.
                       </p>
                     </div>
                   )}
@@ -591,7 +662,19 @@ const SubscriptionPage: React.FC = () => {
                         <span className="text-green-400 text-sm font-semibold">Active</span>
                       </div>
                       <p className="text-white text-xs mt-1">
-                        Remaining: <span className="font-bold text-green-400">{formatRemainingTime(remainingTime)}</span>
+                        Expires in: <span className="font-bold text-green-400">{formatRemainingTime(remainingTime)}</span>
+                      </p>
+                    </div>
+                  )}
+                  {/* Show message if subscription is active but not Pro */}
+                  {isSubscriptionActive && activeSubscriptionType !== 2 && (
+                    <div className="mt-3 p-3 rounded-lg border border-orange-500/30 bg-orange-500/10">
+                      <div className="flex items-center gap-2">
+                        <CloseCircleOutlined className="text-orange-400 text-sm" />
+                        <span className="text-orange-400 text-sm font-semibold">Standard Subscription Active</span>
+                      </div>
+                      <p className="text-white text-xs mt-1">
+                        You have an active Standard subscription. Cancel or wait for it to expire to subscribe to Pro.
                       </p>
                     </div>
                   )}

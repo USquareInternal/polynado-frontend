@@ -1,6 +1,7 @@
 // src/hooks/useMarketScreener.ts
 "use client";
 import { useState, useEffect } from 'react';
+import { useChainId } from 'wagmi';
 import { fetchMarketsViaProxy, MarketData } from '@/services/marketService';
 
 export interface MarketScreenerRow {
@@ -154,6 +155,7 @@ const mapToMarketScreenerRow = (data: MarketData, index: number): MarketScreener
  * Custom hook to fetch market screener data
  */
 export const useMarketScreener = () => {
+  const chainId = useChainId();
   const [markets, setMarkets] = useState<MarketScreenerRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,8 +166,8 @@ export const useMarketScreener = () => {
         setIsLoading(true);
         setError(null);
 
-        // Fetch markets from the API
-        const apiData = await fetchMarketsViaProxy();
+        // Fetch markets from the API with chainId
+        const apiData = await fetchMarketsViaProxy(chainId);
 
         // Map to MarketScreenerRow format
         const screenerRows = apiData
@@ -183,7 +185,7 @@ export const useMarketScreener = () => {
     };
 
     fetchMarkets();
-  }, []);
+  }, [chainId]);
 
   return { markets, isLoading, error };
 };

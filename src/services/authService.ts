@@ -1,6 +1,8 @@
 // src/services/authService.ts
 
-const API_BASE_URL = 'https://polynado-backend-testnet.onrender.com';
+import { API_ENDPOINTS } from '@/config/apiConfig';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://polynado-backend-testnet.onrender.com';
 
 export interface SignupRequest {
   email: string;
@@ -247,10 +249,11 @@ export interface UserDetailsResponse {
     isMintedProNFT: boolean;
     isSubscribedStandard: boolean;
     isSubscribedPro: boolean;
-    standardSubscriptionExpiryTimestamp: string | null;
-    proSubscriptionExpiryTimestamp: string | null;
+    standardSubscriptionExpiryTimestamp: string | number | null;
+    proSubscriptionExpiryTimestamp: string | number | null;
     isWhitelisted: boolean;
     email: string;
+    walletAddress?: string;
     createdAt: string;
     updatedAt: string;
     __v: number;
@@ -286,7 +289,7 @@ export const fetchUserDetails = async (): Promise<UserDetailsResponse> => {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/auth/myDetails`, {
+    const response = await fetch(API_ENDPOINTS.AUTH.MY_DETAILS, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

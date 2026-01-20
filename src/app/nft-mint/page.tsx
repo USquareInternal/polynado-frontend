@@ -1,7 +1,8 @@
 'use client';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MainLayout } from '@/components/layouts/MainLayout';
-import { useAccount, useReadContract } from 'wagmi';
+import { useAccount, useReadContract, useChainId, useSwitchChain } from 'wagmi';
+import { bsc, bscTestnet } from 'wagmi/chains';
 import { LockOutlined, CheckCircleOutlined, CloseCircleOutlined, SettingOutlined } from '@ant-design/icons';
 import {
   useApproveUSDT,
@@ -20,7 +21,7 @@ import {
   useCollectionSupply,
   useUserInfo,
 } from '@/utils/nftContract';
-import { showSuccessAlert,showFailedAlert } from "@/utils/SweetAlertUtils";
+import { showSuccessAlert, showFailedAlert, showWarningAlert } from "@/utils/SweetAlertUtils";
 import { isUserRejection, showRejectionToast } from '@/utils/toast';
 import { useWalletValidation } from '@/hooks/useWalletValidation';
 import { getUserData, fetchUserDetails, requestWhitelist, getWhitelistRequestStatus, UserDetailsResponse, WhitelistRequestResponse } from '@/services/authService';
@@ -28,6 +29,8 @@ import Spinner from '@/components/atoms/Spinner';
 
 const NFTMintDashboard: React.FC = () => {
   const { isConnected, address } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const [mintingStep, setMintingStep] = useState<'idle' | 'approving' | 'minting' | 'success' | 'error'>('idle');
   const [standardError, setStandardError] = useState<string | null>(null);
   const [proError, setProError] = useState<string | null>(null);
@@ -37,9 +40,41 @@ const NFTMintDashboard: React.FC = () => {
   const [whitelistRequestStatus, setWhitelistRequestStatus] = useState<string | null>(null);
   const [isRequestingWhitelist, setIsRequestingWhitelist] = useState(false);
   const [isLoadingUserDetails, setIsLoadingUserDetails] = useState(false);
+  const hasShownNetworkAlert = useRef(false);
   
   // Validate wallet address mapping
   useWalletValidation();
+
+  // BSC Chain IDs (Mainnet: 56, Testnet: 97)
+  const BSC_CHAIN_IDS = [bsc.id, bscTestnet.id]; // [56, 97]
+  const isBSC = BSC_CHAIN_IDS.includes(chainId);
+
+  // Alert user if not connected to BSC network
+  useEffect(() => {
+    // Only show alert if wallet is connected and not on BSC
+    if (isConnected && !isBSC && !hasShownNetworkAlert.current) {
+      hasShownNetworkAlert.current = true;
+      
+      // Get current network name
+      const getNetworkName = (id: number): string => {
+        if (id === bsc.id) return 'BSC Mainnet';
+        if (id === bscTestnet.id) return 'BSC Testnet';
+        if (id === 137) return 'Polygon';
+        return `Chain ${id}`;
+      };
+
+      const currentNetwork = getNetworkName(chainId);
+      
+      showWarningAlert(
+        `You are connected to ${currentNetwork}. The NFT mint contract is deployed on BSC network. Please switch to BSC to mint NFTs.`
+      );
+    }
+
+    // Reset alert flag when chain changes or wallet disconnects
+    if (!isConnected || isBSC) {
+      hasShownNetworkAlert.current = false;
+    }
+  }, [isConnected, chainId, isBSC]);
 
   // Get user ID and auth user data from localStorage (from login response)
   useEffect(() => {

@@ -48,6 +48,9 @@ interface PancakeMarketData {
   yesPrice: number;
   yesPercentage: number;
   volume: number;
+  momentum: number | number[];
+  polynadoFair: number;
+  edge: number;
   openInterest: number;
   action: string;
   currentPrice: number;
@@ -86,6 +89,10 @@ const mapPancakeToMarketData = (pancakeMarket: PancakeMarketData): MarketData =>
     volumeNum: pancakeMarket.volume,
     liquidity: pancakeMarket.liquidity,
     liquidityNum: pancakeMarket.liquidity,
+    polynadoFair: pancakeMarket.polynadoFair,
+    edge: pancakeMarket.edge,
+    // Only pass momentum if it's an array; hook will generate defaults otherwise
+    momentum: Array.isArray(pancakeMarket.momentum) ? pancakeMarket.momentum : undefined,
     openInterest: pancakeMarket.openInterest.toString(),
     price: pancakeMarket.currentPrice,
   };

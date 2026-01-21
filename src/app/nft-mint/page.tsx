@@ -46,7 +46,7 @@ const NFTMintDashboard: React.FC = () => {
   useWalletValidation();
 
   // BSC Chain IDs (Mainnet: 56, Testnet: 97)
-  const BSC_CHAIN_IDS = [bsc.id, bscTestnet.id]; // [56, 97]
+  const BSC_CHAIN_IDS: number[] = [bsc.id, bscTestnet.id]; // [56, 97]
   const isBSC = BSC_CHAIN_IDS.includes(chainId);
 
   // Alert user if not connected to BSC network

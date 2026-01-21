@@ -11,7 +11,7 @@ import { getToken, getUserData } from '@/services/authService';
 import Spinner from '@/components/atoms/Spinner';
 import { useClaimReferralRewards } from '@/utils/nftContract';
 import { showSuccessToast, showErrorToast, showWarningToast, showRejectionToast, isUserRejection } from '@/utils/toast';
-import { API_BASE_URL } from '@/components/organisms/WithdrawalHistory';
+import { API_ENDPOINTS } from '@/config/apiConfig';
 
 // Define the props for the component
 interface ReferralDashboardProps {
@@ -189,7 +189,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
           return;
         }
 
-        const response = await fetch('https://polynado-backend-testnet.onrender.com/api/referral/referred-users', {
+        const response = await fetch(API_ENDPOINTS.REFERRAL.REFERRED_USERS, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -332,7 +332,7 @@ export const ReferralDashboard: React.FC<ReferralDashboardProps> = ({ isHomePage
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/myDetails`, {
+      const response = await fetch(API_ENDPOINTS.AUTH.MY_DETAILS, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

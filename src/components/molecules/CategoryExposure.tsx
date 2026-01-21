@@ -3,6 +3,7 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 
 interface CategoryData {
+  [key: string]: string | number;
   name: string;
   value: number;
   color: string;

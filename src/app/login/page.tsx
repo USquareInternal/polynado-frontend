@@ -2,7 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { login, storeToken, storeUserData, getUserData, getToken } from '@/services/authService';
+import {
+  login,
+  storeToken,
+  storeUserData,
+  getUserData,
+  getToken,
+} from '@/services/authService';
 import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toast';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -267,7 +273,7 @@ const LoginPage: React.FC = () => {
 
                 {/* Forget Password & Create Account Links */}
                 <div className="flex items-center justify-between text-sm pt-2">
-                  <Link 
+                  <Link
                     href="/forgot-password"
                     className="text-gray-400 hover:text-orange-500 transition-colors"
                   >

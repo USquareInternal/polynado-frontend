@@ -2,8 +2,6 @@
 
 import { API_ENDPOINTS } from '@/config/apiConfig';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://polynado-backend-testnet.onrender.com';
-
 export interface SignupRequest {
   email: string;
   password: string;
@@ -63,6 +61,21 @@ export interface ApiError {
   error?: string;
 }
 
+export interface ForgotPasswordSendOtpResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface ForgotPasswordVerifyOtpResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface ForgotPasswordResetResponse {
+  success: boolean;
+  message: string;
+}
+
 /**
  * Verify referral code
  */
@@ -70,7 +83,7 @@ export const verifyReferralCode = async (
  referralCode: string
 ): Promise<VerifyReferralResponse> => {  
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/verify-referral-code`, {
+    const response = await fetch(API_ENDPOINTS.AUTH.VERIFY_REFERRAL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -97,7 +110,7 @@ export const signup = async (
   signupData: SignupRequest
 ): Promise<SignupResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+    const response = await fetch(API_ENDPOINTS.AUTH.SIGNUP, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -128,7 +141,7 @@ export const login = async (
   loginData: LoginRequest
 ): Promise<LoginResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -143,6 +156,90 @@ export const login = async (
 
     if (!response.ok) {
       throw new Error(data.message || 'Failed to login');
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Send OTP to email for password reset
+ */
+export const sendForgotPasswordOtp = async (
+  email: string
+): Promise<ForgotPasswordSendOtpResponse> => {
+  try {
+    const response = await fetch(API_ENDPOINTS.AUTH.FORGOT_PASSWORD_SEND_OTP, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to send OTP');
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Verify OTP sent to email
+ */
+export const verifyForgotPasswordOtp = async (
+  email: string,
+  otp: string
+): Promise<ForgotPasswordVerifyOtpResponse> => {
+  try {
+    const response = await fetch(API_ENDPOINTS.AUTH.FORGOT_PASSWORD_VERIFY_OTP, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, otp }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Invalid OTP');
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Reset password using verified OTP
+ */
+export const resetPasswordWithOtp = async (
+  email: string,
+  otp: string,
+  newPassword: string
+): Promise<ForgotPasswordResetResponse> => {
+  try {
+    const response = await fetch(API_ENDPOINTS.AUTH.FORGOT_PASSWORD_RESET, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to reset password');
     }
 
     return data;
@@ -319,7 +416,7 @@ export const requestWhitelist = async (walletAddress: string): Promise<Whitelist
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/whitelist/request`, {
+    const response = await fetch(API_ENDPOINTS.WHITELIST.REQUEST, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -352,7 +449,7 @@ export const getWhitelistRequestStatus = async (): Promise<WhitelistRequestRespo
       return null;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/whitelist/status`, {
+    const response = await fetch(API_ENDPOINTS.WHITELIST.STATUS, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

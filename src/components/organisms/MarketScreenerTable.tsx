@@ -53,7 +53,7 @@ const MiniLineGraph: React.FC<{ data: number[]; isPositive: boolean }> = ({ data
 };
 
 export const MarketScreenerTable: React.FC = () => {
-  const { markets: marketData, isLoading, error } = useMarketScreener();
+  const { markets: marketData, isLoading, error, isBSCChain } = useMarketScreener();
   const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
 
   const toggleFavorite = (id: string) => {
@@ -68,16 +68,26 @@ export const MarketScreenerTable: React.FC = () => {
     });
   };
 
-  const headers = [
-    'Market',
-    'Yes percentage',
-    'Yes price',
-    'Polynado fair',
-    'Edge',
-    'Momentum',
-    'Volume',
-    'Action',
-  ];
+  const headers = isBSCChain
+    ? [
+        'Market',
+        'Yes percentage',
+        'Yes price',
+        'Polynado fair',
+        'Edge',
+        'Confidence score',
+        'Action',
+      ]
+    : [
+        'Market',
+        'Yes percentage',
+        'Yes price',
+        'Polynado fair',
+        'Edge',
+        'Momentum',
+        'Volume',
+        'Action',
+      ];
 
   return (
     <section className="mb-8 xl:mb-10 fullhd:mb-12">
@@ -137,6 +147,7 @@ export const MarketScreenerTable: React.FC = () => {
               
               const formattedVolume = formatVolume(row.volume);
               const formattedOpenInterest = formatVolume(row.openInterest);
+              const formattedConfidence = formatNumber(row.confidenceScore, 2) + '%';
               
               return (
                 <tr
@@ -178,18 +189,26 @@ export const MarketScreenerTable: React.FC = () => {
                     </span>
                   </td>
 
-                  {/* Momentum */}
-                  <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
-                    <MiniLineGraph data={row.momentum} isPositive={isPositive} />
-                  </td>
+                  {/* Momentum or Confidence Score */}
+                  {isBSCChain ? (
+                    <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
+                      <span className="font-semibold text-white">{formattedConfidence}</span>
+                    </td>
+                  ) : (
+                    <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
+                      <MiniLineGraph data={row.momentum} isPositive={isPositive} />
+                    </td>
+                  )}
 
-                  {/* Volume */}
-                  <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-white">{formattedVolume}</span>
-                      <span className="text-xs xl:text-sm text-gray-400 mt-1">OI: {formattedOpenInterest}</span>
-                    </div>
-                  </td>
+                  {/* Volume (hide for BSC) */}
+                  {!isBSCChain && (
+                    <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-white">{formattedVolume}</span>
+                        <span className="text-xs xl:text-sm text-gray-400 mt-1">OI: {formattedOpenInterest}</span>
+                      </div>
+                    </td>
+                  )}
 
                   {/* Action */}
                   <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">

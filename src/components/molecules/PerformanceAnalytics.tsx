@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { Area, AreaChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { fetchPortfolio } from '@/services/portfolioService';
 import Spinner from '@/components/atoms/Spinner';
@@ -117,6 +117,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export const PerformanceAnalytics: React.FC = () => {
   const { address } = useAccount();
+  const chainId = useChainId();
   const [selectedFilter, setSelectedFilter] = useState<TimeFilter>('ALL');
   const [pnlHistory, setPnLHistory] = useState<PnLHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -134,7 +135,7 @@ export const PerformanceAnalytics: React.FC = () => {
         setIsLoading(true);
         setError(null);
         
-        const portfolioData = await fetchPortfolio(address);
+        const portfolioData = await fetchPortfolio(address, chainId);
         setPnLHistory(portfolioData.pnlHistory || []);
       } catch (err) {
         console.error('Failed to load PnL history:', err);
@@ -145,7 +146,7 @@ export const PerformanceAnalytics: React.FC = () => {
     };
 
     loadPnLHistory();
-  }, [address]);
+  }, [address, chainId]);
 
   // Transform and filter chart data - Ensure all values are explicitly numeric
   const chartData = useMemo(() => {

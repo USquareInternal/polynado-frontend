@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { LikeOutlined, DislikeOutlined } from '@ant-design/icons';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { fetchPortfolio, BetData } from '@/services/portfolioService';
 import Spinner from '@/components/atoms/Spinner';
 
@@ -73,6 +73,7 @@ const StatusBadge: React.FC<{ status: Bet['status'] }> = ({ status }) => {
 
 export const YourBetsTable: React.FC = () => {
   const { address } = useAccount();
+  const chainId = useChainId();
   const [bets, setBets] = useState<Bet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +90,7 @@ export const YourBetsTable: React.FC = () => {
         setIsLoading(true);
         setError(null);
         
-        const portfolioData = await fetchPortfolio(address);
+        const portfolioData = await fetchPortfolio(address, chainId);
         
         // Combine both activeBets and closedBets into a single array
         const allBets = [
@@ -112,7 +113,7 @@ export const YourBetsTable: React.FC = () => {
     };
 
     loadPortfolio();
-  }, [address]);
+  }, [address, chainId]);
 
   if (isLoading) {
     return (

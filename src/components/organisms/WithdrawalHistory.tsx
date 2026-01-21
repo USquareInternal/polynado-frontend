@@ -5,8 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Heading } from '@/components/atoms/Heading';
 import { getToken } from '@/services/authService';
 import { WalletOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-
-export const API_BASE_URL = 'https://polynado-backend-testnet.onrender.com';
+import { API_ENDPOINTS } from '@/config/apiConfig';
 
 interface Withdrawal {
   _id: string;
@@ -43,7 +42,7 @@ export const WithdrawalHistory: React.FC = () => {
 
         // TODO: Replace with actual API endpoint when available
         // For now, using mock data structure
-        const response = await fetch(`${API_BASE_URL}/api/withdrawal/history`, {
+        const response = await fetch(API_ENDPOINTS.WITHDRAWAL.HISTORY, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

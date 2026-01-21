@@ -37,14 +37,20 @@ export interface PortfolioResponse {
 /**
  * Fetches portfolio data for a given wallet address
  */
-export const fetchPortfolio = async (walletAddress: string): Promise<PortfolioResponse['data']> => {
+export const fetchPortfolio = async (walletAddress: string, chainId?: number): Promise<PortfolioResponse['data']> => {
   try {
     const token = getToken();
     if (!token) {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(API_ENDPOINTS.PORTFOLIO.GET("0x23cb796cf58Bfa12352F0164f479deedbd50658E"), {
+    const BSC_CHAIN_IDS = [56, 97];
+    const isBSC = chainId !== undefined && BSC_CHAIN_IDS.includes(chainId);
+    const url = isBSC
+      ? API_ENDPOINTS.PORTFOLIO.PANCAKE("0x00C0F4690Df7cC3AB239c068db8a2308addbbb8a")
+      : API_ENDPOINTS.PORTFOLIO.GET("0x23cb796cf58Bfa12352F0164f479deedbd50658E");
+
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

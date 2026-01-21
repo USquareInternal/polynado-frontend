@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { WalletOutlined, LineChartOutlined, DollarCircleOutlined, TrophyOutlined } from '@ant-design/icons';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { fetchPortfolio } from '@/services/portfolioService';
 import Spinner from '@/components/atoms/Spinner';
 
@@ -97,6 +97,7 @@ const getPnLColor = (value: number): string => {
 
 export const PortfolioSummary: React.FC = () => {
   const { address } = useAccount();
+  const chainId = useChainId();
   const [totalValue, setTotalValue] = useState<number>(0);
   const [unrealizedPnL, setUnrealizedPnL] = useState<number>(0);
   const [realizedPnL, setRealizedPnL] = useState<number>(0);
@@ -115,7 +116,7 @@ export const PortfolioSummary: React.FC = () => {
         setIsLoading(true);
         setError(null);
         
-        const portfolioData = await fetchPortfolio(address);
+        const portfolioData = await fetchPortfolio(address, chainId);
         
         setTotalValue(portfolioData.totalValue || 0);
         setUnrealizedPnL(portfolioData.unrealizedPnL || 0);
@@ -130,7 +131,7 @@ export const PortfolioSummary: React.FC = () => {
     };
 
     loadPortfolio();
-  }, [address]);
+  }, [address, chainId]);
 
   if (isLoading) {
     return (

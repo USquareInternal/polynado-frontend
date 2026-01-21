@@ -27,9 +27,7 @@ import { showSuccessToast, showErrorToast, showWarningToast } from '@/utils/toas
 import { API_ENDPOINTS } from '@/config/apiConfig';
 import Spinner from '@/components/atoms/Spinner';
 
-// FRONTEND: Initialize Stripe with publishable key (pk_)
-// This is safe to expose in the browser - it's public
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+
 
 const SubscriptionPage: React.FC = () => {
   const router = useRouter();

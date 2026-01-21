@@ -15,6 +15,7 @@ export interface MarketScreenerRow {
   momentum: number[];
   volume: number;
   openInterest: number;
+  confidenceScore: number;
   isFavorited?: boolean;
 }
 
@@ -64,6 +65,15 @@ const mapToMarketScreenerRow = (data: MarketData, index: number): MarketScreener
   // If polynadoFair is >= 1, assume it's already a percentage and convert to decimal
   if (polynadoFair >= 1) {
     polynadoFair = polynadoFair / 100;
+  }
+  // Confidence score: prefer backend-provided confidenceScore; else derive from polynadoFair/yesPercentage
+  let confidenceScore = 0;
+  if (data.confidenceScore !== undefined) {
+    confidenceScore = Number(data.confidenceScore) || 0;
+  } else if (data.polynadoFair !== undefined) {
+    confidenceScore = data.polynadoFair >= 1 ? data.polynadoFair : data.polynadoFair * 100;
+  } else {
+    confidenceScore = yesPercentage;
   }
 
   // Get edge value (edge is already in percentage points, e.g., -79.9 means -79.9%)
@@ -147,6 +157,7 @@ const mapToMarketScreenerRow = (data: MarketData, index: number): MarketScreener
     momentum,
     volume,
     openInterest,
+    confidenceScore,
     isFavorited: false,
   };
 };
@@ -156,6 +167,8 @@ const mapToMarketScreenerRow = (data: MarketData, index: number): MarketScreener
  */
 export const useMarketScreener = () => {
   const chainId = useChainId();
+  const BSC_CHAIN_IDS = [56, 97];
+  const isBSCChain = chainId !== undefined && BSC_CHAIN_IDS.includes(chainId);
   const [markets, setMarkets] = useState<MarketScreenerRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,6 +200,6 @@ export const useMarketScreener = () => {
     fetchMarkets();
   }, [chainId]);
 
-  return { markets, isLoading, error };
+  return { markets, isLoading, error, isBSCChain };
 };
 

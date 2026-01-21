@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useWalletValidation } from '@/hooks/useWalletValidation';
 import { getToken } from '@/services/authService';
+import { API_ENDPOINTS } from '@/config/apiConfig';
 
 const PolynodoChatbot: React.FC = () => {
   // Validate wallet address mapping
@@ -55,7 +56,7 @@ const PolynodoChatbot: React.FC = () => {
         throw new Error('Please login to use the chatbot');
       }
 
-      const response = await fetch('https://polynado-backend-testnet.onrender.com/api/chatbot/chat', {
+      const response = await fetch(API_ENDPOINTS.CHATBOT.CHAT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

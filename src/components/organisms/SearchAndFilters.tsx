@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { SearchOutlined, FilterOutlined, DownOutlined } from '@ant-design/icons';
+import { SearchOutlined, RiseOutlined, FallOutlined } from '@ant-design/icons';
 
 const categories = [
   'All',
@@ -14,7 +14,14 @@ const categories = [
 
 ];
 
-export const SearchAndFilters: React.FC = () => {
+type SortDirection = 'none' | 'asc' | 'desc';
+
+interface SearchAndFiltersProps {
+  onSortByPolynadoFair?: () => void;
+  sortDirection?: SortDirection;
+}
+
+export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ onSortByPolynadoFair, sortDirection = 'none' }) => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -42,12 +49,32 @@ export const SearchAndFilters: React.FC = () => {
           />
         </div>
         
-        {/* Filter and Sort Icons */}
-        <button className="p-3 xl:p-3.5 fullhd:p-4 rounded-lg bg-[#000000] border border-gray-700 text-gray-400 hover:text-white hover:border-orange-500/50 transition-all">
-          <FilterOutlined className="text-lg xl:text-xl" />
-        </button>
-        <button className="p-3 xl:p-3.5 fullhd:p-4 rounded-lg bg-[#000000] border border-gray-700 text-gray-400 hover:text-white hover:border-orange-500/50 transition-all">
-          <DownOutlined className="text-lg xl:text-xl" />
+        {/* Sort by Polynado Fair */}
+        <button
+          onClick={onSortByPolynadoFair}
+          className={`p-3 xl:p-3.5 fullhd:p-4 rounded-lg bg-[#000000] border transition-all relative group ${
+            sortDirection !== 'none' 
+              ? 'border-orange-500/50 text-white' 
+              : 'border-gray-700 text-gray-400 hover:text-white hover:border-orange-500/50'
+          }`}
+          title="Polynado fair"
+        >
+          <div className="flex flex-col items-center justify-center gap-0.5">
+            <FallOutlined 
+              className={`text-sm xl:text-base transition-colors ${
+                sortDirection === 'desc' ? 'text-orange-500' : 'text-current'
+              }`} 
+            />
+            <RiseOutlined 
+              className={`text-sm xl:text-base transition-colors ${
+                sortDirection === 'asc' ? 'text-orange-500' : 'text-current'
+              }`} 
+            />
+          </div>
+          {/* Tooltip */}
+          <div className="absolute right-0 top-full mt-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+            Polynado fair
+          </div>
         </button>
       </div>
 

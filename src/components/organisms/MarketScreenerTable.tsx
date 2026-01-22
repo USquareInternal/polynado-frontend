@@ -52,9 +52,42 @@ const MiniLineGraph: React.FC<{ data: number[]; isPositive: boolean }> = ({ data
   );
 };
 
-export const MarketScreenerTable: React.FC = () => {
+type SortDirection = 'none' | 'asc' | 'desc';
+
+interface MarketScreenerTableProps {
+  sortByPolynadoFair?: SortDirection;
+}
+
+export const MarketScreenerTable: React.FC<MarketScreenerTableProps> = ({ sortByPolynadoFair = 'none' }) => {
   const { markets: marketData, isLoading, error, isBSCChain } = useMarketScreener();
   const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
+
+  // Sort markets by Polynado fair based on sort direction
+  const sortedMarketData = React.useMemo(() => {
+    if (sortByPolynadoFair === 'none' || !marketData || marketData.length === 0) {
+      return marketData;
+    }
+    
+    return [...marketData].sort((a, b) => {
+      // polynadoFair is stored as decimal (0-1) in MarketScreenerRow
+      // Convert to percentage for comparison (0-100)
+      const aPolynadoFair = a.polynadoFair ?? 0;
+      const bPolynadoFair = b.polynadoFair ?? 0;
+      
+      // Normalize to percentage: if < 1, it's decimal, multiply by 100; otherwise it's already percentage
+      const aValue = aPolynadoFair < 1 ? aPolynadoFair * 100 : aPolynadoFair;
+      const bValue = bPolynadoFair < 1 ? bPolynadoFair * 100 : bPolynadoFair;
+      
+      // Apply sort direction
+      if (sortByPolynadoFair === 'desc') {
+        // Descending order: higher values first (b - a)
+        return bValue - aValue;
+      } else {
+        // Ascending order: lower values first (a - b)
+        return aValue - bValue;
+      }
+    });
+  }, [marketData, sortByPolynadoFair]);
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {
@@ -133,7 +166,7 @@ export const MarketScreenerTable: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              marketData.map((row, idx) => {
+              sortedMarketData.map((row, idx) => {
               const isPositive = row.yesPercentage >= 50;
               const isFavorited = favorites.has(row.id);
               

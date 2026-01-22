@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { getToken } from '@/services/authService';
@@ -13,9 +13,20 @@ import { TopMarketMoversSection } from '@/components/organisms/TopMarketMoversSe
 const MarketScreenerPage: React.FC = () => {
   const router = useRouter();
   const { isConnected } = useAccount();
+  type SortDirection = 'none' | 'asc' | 'desc';
+  const [sortByPolynadoFair, setSortByPolynadoFair] = useState<SortDirection>('none');
   
   // Validate wallet address mapping
   useWalletValidation();
+
+  const handleSortByPolynadoFair = () => {
+    setSortByPolynadoFair(prev => {
+      // Cycle through: none -> desc -> asc -> none
+      if (prev === 'none') return 'desc';
+      if (prev === 'desc') return 'asc';
+      return 'none';
+    });
+  };
 
 //   // Check authentication and wallet connection
 //   useEffect(() => {
@@ -49,10 +60,13 @@ const MarketScreenerPage: React.FC = () => {
         <TopMarketMoversSection />
 
         {/* Search and Filters */}
-        <SearchAndFilters />
+        <SearchAndFilters 
+          onSortByPolynadoFair={handleSortByPolynadoFair}
+          sortDirection={sortByPolynadoFair}
+        />
 
         {/* Market Table */}
-        <MarketScreenerTable />
+        <MarketScreenerTable sortByPolynadoFair={sortByPolynadoFair} />
 
         <div className="mb-8 xl:mb-10 fullhd:mb-12">
           <h1 className="text-2xl sm:text-3xl xl:text-4xl fullhd:text-5xl font-bold text-white mb-2">

@@ -7,7 +7,7 @@ import { verifyForgotPasswordOtp } from '@/services/authService';
 import { showErrorToast, showSuccessToast } from '@/utils/toast';
 
 const FP_EMAIL_KEY = 'forgotPasswordEmail';
-const FP_OTP_KEY = 'forgotPasswordOtp';
+const FP_RESET_TOKEN_KEY = 'forgotPasswordResetToken';
 
 const ForgotPasswordVerifyPage: React.FC = () => {
   const router = useRouter();
@@ -34,9 +34,13 @@ const ForgotPasswordVerifyPage: React.FC = () => {
     }
     setIsLoading(true);
     try {
-      await verifyForgotPasswordOtp(email.trim(), otp.trim());
+      const response = await verifyForgotPasswordOtp(email.trim(), otp.trim());
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem(FP_OTP_KEY, otp.trim());
+        if (response.resetToken) {
+          sessionStorage.setItem(FP_RESET_TOKEN_KEY, response.resetToken);
+        } else {
+          throw new Error('Reset token not received from server');
+        }
       }
       showSuccessToast('OTP verified. Proceed to reset password.');
       router.push('/forgot-password/reset');

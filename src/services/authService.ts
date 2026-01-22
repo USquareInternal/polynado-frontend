@@ -69,6 +69,7 @@ export interface ForgotPasswordSendOtpResponse {
 export interface ForgotPasswordVerifyOtpResponse {
   success: boolean;
   message: string;
+  resetToken?: string;
 }
 
 export interface ForgotPasswordResetResponse {
@@ -220,11 +221,10 @@ export const verifyForgotPasswordOtp = async (
 };
 
 /**
- * Reset password using verified OTP
+ * Reset password using reset token from verified OTP
  */
 export const resetPasswordWithOtp = async (
-  email: string,
-  otp: string,
+  resetToken: string,
   newPassword: string
 ): Promise<ForgotPasswordResetResponse> => {
   try {
@@ -233,7 +233,7 @@ export const resetPasswordWithOtp = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, otp, newPassword }),
+      body: JSON.stringify({ resetToken, newPassword }),
     });
 
     const data = await response.json();

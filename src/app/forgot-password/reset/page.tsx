@@ -6,32 +6,24 @@ import { useRouter } from 'next/navigation';
 import { resetPasswordWithOtp } from '@/services/authService';
 import { showErrorToast, showSuccessToast } from '@/utils/toast';
 
-const FP_EMAIL_KEY = 'forgotPasswordEmail';
-const FP_OTP_KEY = 'forgotPasswordOtp';
+const FP_RESET_TOKEN_KEY = 'forgotPasswordResetToken';
 
 const ForgotPasswordResetPage: React.FC = () => {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load email and otp from sessionStorage; redirect back if missing
+  // Load resetToken from sessionStorage; redirect back if missing
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const storedEmail = sessionStorage.getItem(FP_EMAIL_KEY);
-    const storedOtp = sessionStorage.getItem(FP_OTP_KEY);
-    if (!storedEmail) {
-      router.replace('/forgot-password');
-      return;
-    }
-    if (!storedOtp) {
+    const storedResetToken = sessionStorage.getItem(FP_RESET_TOKEN_KEY);
+    if (!storedResetToken) {
       router.replace('/forgot-password/verify');
       return;
     }
-    setEmail(storedEmail);
-    setOtp(storedOtp);
+    setResetToken(storedResetToken);
   }, [router]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -47,10 +39,9 @@ const ForgotPasswordResetPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await resetPasswordWithOtp(email.trim(), otp.trim(), newPassword);
+      await resetPasswordWithOtp(resetToken, newPassword);
       if (typeof window !== 'undefined') {
-        sessionStorage.removeItem(FP_EMAIL_KEY);
-        sessionStorage.removeItem(FP_OTP_KEY);
+        sessionStorage.removeItem(FP_RESET_TOKEN_KEY);
       }
       showSuccessToast('Password updated. You can now log in.');
       router.push('/login');

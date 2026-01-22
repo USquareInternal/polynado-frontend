@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
-import { SearchOutlined, RiseOutlined, FallOutlined } from '@ant-design/icons';
+import { SearchOutlined } from '@ant-design/icons';
+import { LiaSortNumericDownSolid, LiaSortNumericUpSolid } from 'react-icons/lia';
 
 const categories = [
   'All',
@@ -60,13 +61,13 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ onSortByPoly
           title="Polynado fair"
         >
           <div className="flex flex-col items-center justify-center gap-0.5">
-            <FallOutlined 
-              className={`text-sm xl:text-base transition-colors ${
+            <LiaSortNumericDownSolid 
+              className={`text-base xl:text-lg transition-colors ${
                 sortDirection === 'desc' ? 'text-orange-500' : 'text-current'
               }`} 
             />
-            <RiseOutlined 
-              className={`text-sm xl:text-base transition-colors ${
+            <LiaSortNumericUpSolid 
+              className={`text-base xl:text-lg transition-colors ${
                 sortDirection === 'asc' ? 'text-orange-500' : 'text-current'
               }`} 
             />

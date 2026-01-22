@@ -16,6 +16,7 @@ export interface MarketScreenerRow {
   volume: number;
   openInterest: number;
   confidenceScore: number;
+  action?: string;
   isFavorited?: boolean;
 }
 
@@ -158,6 +159,7 @@ const mapToMarketScreenerRow = (data: MarketData, index: number): MarketScreener
     volume,
     openInterest,
     confidenceScore,
+    action: data.action, // Map action field
     isFavorited: false,
   };
 };

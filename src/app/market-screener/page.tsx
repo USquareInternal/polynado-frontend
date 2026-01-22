@@ -9,6 +9,7 @@ import { FeaturedMarketCards } from '@/components/organisms/FeaturedMarketCards'
 import { SearchAndFilters } from '@/components/organisms/SearchAndFilters';
 import { MarketScreenerTable } from '@/components/organisms/MarketScreenerTable';
 import { TopMarketMoversSection } from '@/components/organisms/TopMarketMoversSection';
+import { FAQSection } from '@/components/organisms/FAQSection';
 
 const MarketScreenerPage: React.FC = () => {
   const router = useRouter();
@@ -79,6 +80,9 @@ const MarketScreenerPage: React.FC = () => {
 
         {/* Featured Market Cards */}
         <FeaturedMarketCards />
+
+        {/* FAQ Section */}
+        <FAQSection />
       </div>
     </MainLayout>
   );

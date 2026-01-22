@@ -246,7 +246,7 @@ export const MarketScreenerTable: React.FC<MarketScreenerTableProps> = ({ sortBy
                   {/* Action */}
                   <td className="px-4 xl:px-6 fullhd:px-8 py-3 xl:py-4 fullhd:py-5 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <button
+                      {/* <button
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleFavorite(row.id);
@@ -258,10 +258,25 @@ export const MarketScreenerTable: React.FC<MarketScreenerTableProps> = ({ sortBy
                         ) : (
                           <StarOutlined className="text-lg xl:text-xl" />
                         )}
-                      </button>
-                      <button className="text-gray-400 hover:text-orange-400 transition-colors">
-                        <RightOutlined className="text-lg xl:text-xl" />
-                      </button>
+                      </button> */}
+                      {row.action ? (
+                        <a
+                          href={row.action}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-gray-400 hover:text-orange-400 transition-colors"
+                        >
+                          <RightOutlined className="text-lg xl:text-xl" />
+                        </a>
+                      ) : (
+                        <button 
+                          className="text-gray-400 hover:text-orange-400 transition-colors"
+                          disabled
+                        >
+                          <RightOutlined className="text-lg xl:text-xl opacity-50" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -30,6 +30,7 @@ export interface MarketData {
   volume?: string | number;
   liquidity?: string | number;
   change?: string;
+  action?: string;
 }
 
 export interface MarketsResponse {
@@ -103,6 +104,7 @@ const mapPancakeToMarketData = (pancakeMarket: PancakeMarketData): MarketData =>
     momentum: Array.isArray(pancakeMarket.momentum) ? pancakeMarket.momentum : undefined,
     openInterest: pancakeMarket.openInterest.toString(),
     price: pancakeMarket.currentPrice,
+    action: pancakeMarket.action, // Map action field
   };
 };
 

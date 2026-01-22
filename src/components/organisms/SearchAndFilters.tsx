@@ -50,7 +50,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ onSortByPoly
           />
         </div>
         
-        {/* Sort by Polynado Fair */}
+        {/* Sort by Edge */}
         <button
           onClick={onSortByPolynadoFair}
           className={`p-3 xl:p-3.5 fullhd:p-4 rounded-lg bg-[#000000] border transition-all relative group ${
@@ -58,7 +58,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ onSortByPoly
               ? 'border-orange-500/50 text-white' 
               : 'border-gray-700 text-gray-400 hover:text-white hover:border-orange-500/50'
           }`}
-          title="Polynado fair"
+          title="Edge"
         >
           <div className="flex flex-col items-center justify-center gap-0.5">
             <LiaSortNumericDownSolid 
@@ -74,7 +74,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ onSortByPoly
           </div>
           {/* Tooltip */}
           <div className="absolute right-0 top-full mt-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-            Polynado fair
+            Edge
           </div>
         </button>
       </div>

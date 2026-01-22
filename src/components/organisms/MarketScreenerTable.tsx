@@ -62,29 +62,24 @@ export const MarketScreenerTable: React.FC<MarketScreenerTableProps> = ({ sortBy
   const { markets: marketData, isLoading, error, isBSCChain } = useMarketScreener();
   const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
 
-  // Sort markets by Polynado fair based on sort direction
+  // Sort markets by Edge based on sort direction
   const sortedMarketData = React.useMemo(() => {
     if (sortByPolynadoFair === 'none' || !marketData || marketData.length === 0) {
       return marketData;
     }
     
     return [...marketData].sort((a, b) => {
-      // polynadoFair is stored as decimal (0-1) in MarketScreenerRow
-      // Convert to percentage for comparison (0-100)
-      const aPolynadoFair = a.polynadoFair ?? 0;
-      const bPolynadoFair = b.polynadoFair ?? 0;
-      
-      // Normalize to percentage: if < 1, it's decimal, multiply by 100; otherwise it's already percentage
-      const aValue = aPolynadoFair < 1 ? aPolynadoFair * 100 : aPolynadoFair;
-      const bValue = bPolynadoFair < 1 ? bPolynadoFair * 100 : bPolynadoFair;
+      // Edge is stored as percentage points (e.g., -79.9 means -79.9%)
+      const aEdge = a.edge ?? 0;
+      const bEdge = b.edge ?? 0;
       
       // Apply sort direction
       if (sortByPolynadoFair === 'desc') {
         // Descending order: higher values first (b - a)
-        return bValue - aValue;
+        return bEdge - aEdge;
       } else {
         // Ascending order: lower values first (a - b)
-        return aValue - bValue;
+        return aEdge - bEdge;
       }
     });
   }, [marketData, sortByPolynadoFair]);
